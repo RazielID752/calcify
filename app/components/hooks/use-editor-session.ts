@@ -21,13 +21,28 @@ const moveCaretToEnd = (element: HTMLElement) => {
 export function useEditorSession() {
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const lastSavedHtmlRef = useRef("");
   const [html, setHtml] = useState("");
 
-  useEffect(() => {
-    const savedHtml = localStorage.getItem(STORAGE_KEY);
+  const saveHtmlToStorage = useCallback((nextHtml: string) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, nextHtml);
+      lastSavedHtmlRef.current = nextHtml;
+    } catch {
+      // Ignore storage errors (quota/private mode) to avoid breaking editor usage.
+    }
+  }, []);
 
-    if (savedHtml) {
-      setHtml(savedHtml);
+  useEffect(() => {
+    try {
+      const savedHtml = localStorage.getItem(STORAGE_KEY);
+
+      if (savedHtml) {
+        setHtml(savedHtml);
+        lastSavedHtmlRef.current = savedHtml;
+      }
+    } catch {
+      // Ignore read errors and keep editor usable.
     }
   }, []);
 
@@ -66,9 +81,9 @@ export function useEditorSession() {
 
     const nextHtml = editor.innerHTML;
     setHtml(nextHtml);
-    localStorage.setItem(STORAGE_KEY, nextHtml);
+    saveHtmlToStorage(nextHtml);
     updateSavedRange();
-  }, [updateSavedRange]);
+  }, [saveHtmlToStorage, updateSavedRange]);
 
   const restoreSelectionToEnd = useCallback(() => {
     const editor = editorRef.current;
@@ -92,11 +107,42 @@ export function useEditorSession() {
 
       editor.innerHTML = nextHtml;
       setHtml(nextHtml);
-      localStorage.setItem(STORAGE_KEY, nextHtml);
+      saveHtmlToStorage(nextHtml);
       restoreSelectionToEnd();
     },
-    [restoreSelectionToEnd],
+    [restoreSelectionToEnd, saveHtmlToStorage],
   );
+
+  useEffect(() => {
+    const autosave = () => {
+      const editor = editorRef.current;
+
+      if (!editor) {
+        return;
+      }
+
+      const nextHtml = editor.innerHTML;
+
+      if (nextHtml !== lastSavedHtmlRef.current) {
+        saveHtmlToStorage(nextHtml);
+      }
+    };
+
+    const intervalId = window.setInterval(autosave, 1500);
+
+    const flushAutosave = () => {
+      autosave();
+    };
+
+    window.addEventListener("beforeunload", flushAutosave);
+    document.addEventListener("visibilitychange", flushAutosave);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("beforeunload", flushAutosave);
+      document.removeEventListener("visibilitychange", flushAutosave);
+    };
+  }, [saveHtmlToStorage]);
 
   const getCommandContext = useCallback(() => {
     const editor = editorRef.current;

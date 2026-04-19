@@ -102,20 +102,16 @@ const isHighlightElement = (element: HTMLElement) => {
     return true;
   }
 
+  if (element.tagName === "FONT" && element.hasAttribute("bgcolor")) {
+    return true;
+  }
+
   const computedBg = window.getComputedStyle(element).backgroundColor;
   return !isTransparentColor(computedBg);
 };
 
-const clearHighlightFormatting = (context: EditorContext) => {
-  const editor = context.editor;
-  const selection = window.getSelection();
-
-  if (!selection || selection.rangeCount === 0) {
-    return;
-  }
-
-  const range = selection.getRangeAt(0);
-  const nodesToClear: HTMLElement[] = [];
+const getHighlightNodesInRange = (editor: HTMLDivElement, range: Range) => {
+  const nodes: HTMLElement[] = [];
 
   const walker = document.createTreeWalker(editor, NodeFilter.SHOW_ELEMENT, {
     acceptNode(node) {
@@ -137,14 +133,41 @@ const clearHighlightFormatting = (context: EditorContext) => {
 
   while (currentNode) {
     if (currentNode instanceof HTMLElement) {
-      nodesToClear.push(currentNode);
+      nodes.push(currentNode);
     }
 
     currentNode = walker.nextNode();
   }
 
+  return nodes;
+};
+
+const hasHighlightInSelection = (editor: HTMLDivElement) => {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return false;
+  }
+
+  const range = selection.getRangeAt(0);
+  const nodes = getHighlightNodesInRange(editor, range);
+
+  return nodes.length > 0;
+};
+
+const clearHighlightFormatting = (context: EditorContext) => {
+  const editor = context.editor;
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  const nodesToClear = getHighlightNodesInRange(editor, range);
+
   for (const element of nodesToClear) {
-    if (element.tagName === "MARK") {
+    if (element.tagName === "MARK" || element.tagName === "FONT") {
       const parent = element.parentNode;
 
       if (!parent) {
@@ -160,6 +183,8 @@ const clearHighlightFormatting = (context: EditorContext) => {
     }
 
     element.style.backgroundColor = "";
+    element.style.background = "";
+    element.removeAttribute("bgcolor");
 
     if (!element.getAttribute("style")?.trim()) {
       element.removeAttribute("style");
@@ -225,21 +250,25 @@ export const editorCommands = {
       selection?.anchorNode?.nodeType === Node.TEXT_NODE
         ? selection.anchorNode.parentElement
         : (selection?.anchorNode as Element | null);
-    const highlightAncestor = anchorElement?.closest("mark,span");
+    const highlightAncestor = anchorElement?.closest("mark,span,font");
     const isActiveByCommand = !isTransparentColor(commandValue);
     const isActiveByAncestor =
       highlightAncestor instanceof HTMLElement &&
       isHighlightElement(highlightAncestor);
+    const isActiveBySelection = hasHighlightInSelection(context.editor);
 
-    const shouldRemoveHighlight = isActiveByCommand || isActiveByAncestor;
+    const shouldRemoveHighlight =
+      isActiveBySelection || isActiveByCommand || isActiveByAncestor;
 
     if (shouldRemoveHighlight) {
+      document.execCommand("styleWithCSS", false, "true");
       runExecCommand(context, "hiliteColor", "transparent");
       runExecCommand(context, "backColor", "transparent");
       clearHighlightFormatting(context);
       return;
     }
 
+    document.execCommand("styleWithCSS", false, "true");
     runExecCommand(context, "hiliteColor", "#fff5a6");
   },
   subscript(context: EditorContext) {

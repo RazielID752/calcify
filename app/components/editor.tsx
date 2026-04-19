@@ -341,7 +341,7 @@ export default function Editor() {
           {/* biome-ignore lint/a11y/noStaticElementInteractions: um editor rich text obrigatoriamente precisa usar uma div com contentEditable. */}
           <div
             ref={editorRef}
-            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-zinc-600 [&_code]:rounded [&_code]:bg-zinc-100 [&_code]:px-1 [&_h1]:mt-6 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:text-xl [&_h4]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100"
+            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-zinc-600 [&_code]:rounded [&_code]:px-1 [&_h1]:mt-6 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:text-xl [&_h4]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100"
             data-placeholder="Digite algum texto..."
             contentEditable
             suppressContentEditableWarning
@@ -360,6 +360,10 @@ export default function Editor() {
             }}
             onFocus={() => {
               updateSavedRange();
+              syncToolbarState();
+            }}
+            onBlur={() => {
+              persistHtml();
               syncToolbarState();
             }}
           />

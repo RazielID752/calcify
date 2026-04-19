@@ -289,9 +289,9 @@ export default function Editor() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
         <div className="space-y-1 px-1 flex justify-between">
           <h1 className="text-2xl font-semibold text-zinc-900">Calcify</h1>
-          <p className="text-sm text-zinc-600">
-            Use markdown, formatação rica e expressões como `20 + 15 =` para
-            calcular automaticamente.
+          <p className="text-[10px] max-w-[35ch] md:text-sm text-zinc-600">
+            Use markdown, formatação e calculos como `20 + 15 =` para calcular
+            automaticamente.
           </p>
         </div>
 

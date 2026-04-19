@@ -18,7 +18,10 @@ function detectCurrencyHint(input: string): SupportedCurrency | null {
   return null;
 }
 
-function formatValue(value: unknown, currency: SupportedCurrency | null): string {
+function formatValue(
+  value: unknown,
+  currency: SupportedCurrency | null,
+): string {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return String(value);
   }
@@ -36,22 +39,22 @@ function formatValue(value: unknown, currency: SupportedCurrency | null): string
 function normalizeExpression(expression: string): string {
   const withoutCurrencyPrefixes = expression.replace(
     /(^|[\s(,:;])(?:R\$|\$|€)\s*/g,
-    "$1"
+    "$1",
   );
 
   const withoutCurrency = withoutCurrencyPrefixes.replace(
     /\b(?:BRL|USD|EUR)\b/gi,
-    ""
+    "",
   );
 
   const withNormalizedThousands = withoutCurrency.replace(
     /\b\d{1,3}(?:\.\d{3})+,\d+\b/g,
-    (value) => value.replace(/\./g, "").replace(",", ".")
+    (value) => value.replace(/\./g, "").replace(",", "."),
   );
 
   const withNormalizedDecimals = withNormalizedThousands.replace(
     /\b\d+,\d+\b/g,
-    (value) => value.replace(",", ".")
+    (value) => value.replace(",", "."),
   );
 
   return withNormalizedDecimals;
@@ -59,12 +62,16 @@ function normalizeExpression(expression: string): string {
 
 function tryEvaluateExpression(
   expression: string,
-  scope: Record<string, unknown>
+  scope: Record<string, unknown>,
 ): { ok: true; value: unknown } | { ok: false } {
   try {
     const normalizedExpression = normalizeExpression(expression);
     const parsedExpression = applyAddSubPercentage(normalizedExpression);
     const value = evaluate(parsedExpression, scope);
+
+    if (value === undefined) {
+      return { ok: false };
+    }
 
     return { ok: true, value };
   } catch {
@@ -74,7 +81,7 @@ function tryEvaluateExpression(
 
 function tryEvaluateTrailingExpression(
   line: string,
-  scope: Record<string, unknown>
+  scope: Record<string, unknown>,
 ): { ok: true; value: unknown } | { ok: false } {
   const tokens = line.trim().split(/\s+/);
 
@@ -121,7 +128,7 @@ function applyAddSubPercentage(expression: string): string {
         const delta = (baseValue * percentValue) / 100;
 
         return String(operator === "+" ? baseValue + delta : baseValue - delta);
-      }
+      },
     );
   }
 
@@ -160,13 +167,50 @@ export function calculateLines(text: string): string[] {
 
         const evaluatedExpression = tryEvaluateExpression(expression, scope);
 
-        if (!evaluatedExpression.ok) {
+        if (evaluatedExpression.ok) {
+          const result = evaluatedExpression.value;
+
+          return `${expression} = ${formatValue(result, currencyHint)}`;
+        }
+
+        const trailingExpression = tryEvaluateTrailingExpression(
+          expression,
+          scope,
+        );
+
+        if (!trailingExpression.ok) {
           return line;
         }
 
-        const result = evaluatedExpression.value;
+        return `${expression} = ${formatValue(trailingExpression.value, currencyHint)}`;
+      }
 
-        return `${expression} = ${formatValue(result, currencyHint)}`;
+      const resolvedLineMatch = line.match(/^(.*?)\s*=\s*(.+)\s*$/);
+
+      if (resolvedLineMatch) {
+        const expression = resolvedLineMatch[1].trim();
+        const currencyHint = detectCurrencyHint(expression);
+
+        if (expression === "") {
+          return line;
+        }
+
+        const evaluatedExpression = tryEvaluateExpression(expression, scope);
+
+        if (evaluatedExpression.ok) {
+          return `${expression} = ${formatValue(evaluatedExpression.value, currencyHint)}`;
+        }
+
+        const trailingExpression = tryEvaluateTrailingExpression(
+          expression,
+          scope,
+        );
+
+        if (trailingExpression.ok) {
+          return `${expression} = ${formatValue(trailingExpression.value, currencyHint)}`;
+        }
+
+        return line;
       }
 
       const currencyHint = detectCurrencyHint(line);

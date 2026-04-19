@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { renderMarkdownToHtml } from "@/utils/render-markdown";
 import {
   type AlignType,
   editorCommands,
@@ -9,9 +10,10 @@ import {
   mathOptions,
 } from "./editor-commands";
 import EditorToolbar from "./editor-toolbar";
-import ZoomControls from "./zoom-controls";
 import { useAutoTransforms } from "./hooks/use-auto-transforms";
 import { useEditorSession } from "./hooks/use-editor-session";
+import { useMarkdownRenderer } from "./hooks/use-markdown-renderer";
+import ZoomControls from "./zoom-controls";
 
 export default function Editor() {
   const {
@@ -31,6 +33,7 @@ export default function Editor() {
     italic: false,
     strike: false,
     underline: false,
+    highlight: false,
     subscript: false,
     inlineCode: false,
     bulletList: false,
@@ -45,6 +48,12 @@ export default function Editor() {
     savedRangeRef,
     moveCursorToEnd,
     persistHtml,
+  });
+
+  useMarkdownRenderer({
+    editorRef,
+    onHtmlChange: applyExternalHtml,
+    debounceMs: 500,
   });
 
   const syncToolbarState = useCallback(() => {
@@ -77,11 +86,38 @@ export default function Editor() {
         ? "right"
         : "left";
 
+    const highlightValue = `${document.queryCommandValue("hiliteColor") ?? ""}`
+      .trim()
+      .toLowerCase();
+    const hasHighlightCommandValue =
+      highlightValue.length > 0 &&
+      highlightValue !== "false" &&
+      highlightValue !== "none" &&
+      highlightValue !== "normal" &&
+      highlightValue !== "unset" &&
+      highlightValue !== "transparent" &&
+      highlightValue !== "rgba(0, 0, 0, 0)" &&
+      highlightValue !== "inherit" &&
+      highlightValue !== "initial";
+
+    const highlightElement = selectionElement?.closest("mark,span");
+    const highlightBg = highlightElement
+      ? window.getComputedStyle(highlightElement).backgroundColor.toLowerCase()
+      : "";
+    const hasHighlightAncestor =
+      !!highlightElement &&
+      highlightBg.length > 0 &&
+      highlightBg !== "transparent" &&
+      highlightBg !== "rgba(0, 0, 0, 0)";
+
+    const isHighlighted = hasHighlightCommandValue || hasHighlightAncestor;
+
     setToolbarState({
       bold: document.queryCommandState("bold"),
       italic: document.queryCommandState("italic"),
       strike: document.queryCommandState("strikeThrough"),
       underline: document.queryCommandState("underline"),
+      highlight: isHighlighted,
       subscript: document.queryCommandState("subscript"),
       inlineCode: Boolean(selectionElement?.closest("code")),
       bulletList: document.queryCommandState("insertUnorderedList"),
@@ -94,6 +130,7 @@ export default function Editor() {
 
   useEffect(() => {
     const handleSelectionChange = () => {
+      updateSavedRange();
       syncToolbarState();
     };
 
@@ -102,7 +139,7 @@ export default function Editor() {
     return () => {
       document.removeEventListener("selectionchange", handleSelectionChange);
     };
-  }, [syncToolbarState]);
+  }, [syncToolbarState, updateSavedRange]);
 
   const run = useCallback(
     (
@@ -174,27 +211,31 @@ export default function Editor() {
     run((context) => editorCommands.insertMath(context, value));
   };
 
-  const handleRenderMarkdown = () => {
+  const handleRenderMarkdown = useCallback(() => {
     const editor = editorRef.current;
 
     if (!editor) {
       return;
     }
 
-    const currentMarkdown = editorCommands.htmlToMarkdown(editor.innerHTML);
-    const inputMarkdown = window.prompt(
-      "Cole o markdown para renderizar no editor:",
-      currentMarkdown,
-    );
+    const text = editor.innerText;
+    const html = renderMarkdownToHtml(text);
 
-    if (inputMarkdown === null) {
-      return;
-    }
+    applyExternalHtml(html);
+  }, [editorRef, applyExternalHtml]);
 
-    const rendered = editorCommands.markdownToHtml(inputMarkdown);
-    applyExternalHtml(rendered);
-    syncToolbarState();
-  };
+  // Atalho: Ctrl+Shift+M para renderizar Markdown
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "m") {
+        e.preventDefault();
+        handleRenderMarkdown();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleRenderMarkdown]);
 
   const handleCopyMarkdown = async () => {
     const editor = editorRef.current;
@@ -235,7 +276,7 @@ export default function Editor() {
 
   return (
     <div
-      className="relative min-h-screen bg-[radial-gradient(circle_at_top,_#e7f7ef_0%,_#f8fafc_45%,_#ffffff_100%)] px-3 py-6 sm:px-6 sm:py-8"
+      className="relative min-h-screen bg-[radial-gradient(circle_at_top,#e7f7ef_0%,#f8fafc_45%,#ffffff_100%)] px-3 py-6 sm:px-6 sm:py-8"
       style={{
         fontSize: `${zoom}%`,
       }}
@@ -300,7 +341,7 @@ export default function Editor() {
           {/* biome-ignore lint/a11y/noStaticElementInteractions: um editor rich text obrigatoriamente precisa usar uma div com contentEditable. */}
           <div
             ref={editorRef}
-            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-zinc-600 [&_code]:rounded [&_code]:bg-zinc-100 [&_code]:px-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100"
+            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-zinc-600 [&_code]:rounded [&_code]:bg-zinc-100 [&_code]:px-1 [&_h1]:mt-6 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:text-xl [&_h4]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100"
             data-placeholder="Digite algum texto..."
             contentEditable
             suppressContentEditableWarning

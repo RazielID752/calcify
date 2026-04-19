@@ -105,9 +105,15 @@ export function useEditorSession() {
       return null;
     }
 
+    const selection = window.getSelection();
+    const liveRange =
+      selection && selection.rangeCount > 0
+        ? selection.getRangeAt(0).cloneRange()
+        : savedRangeRef.current;
+
     return {
       editor,
-      savedRange: savedRangeRef.current,
+      savedRange: liveRange,
     };
   }, []);
 

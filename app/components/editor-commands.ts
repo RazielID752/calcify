@@ -1,6 +1,7 @@
-import DOMPurify from "dompurify";
-import { marked } from "marked";
-import TurndownService from "turndown";
+import {
+  htmlToMarkdown as markdownUtilsHtmlToMarkdown,
+  renderMarkdownToHtml,
+} from "@/utils/markdown-utils";
 
 export type HeadingLevel = "h1" | "h2" | "h3" | "h4";
 export type ListType = "bullet" | "ordered";
@@ -31,29 +32,12 @@ export const mathOptions: MathOption[] = [
   { value: "tan", label: "Tangente (tan)", template: "tan()" },
   { value: "log", label: "Log (log)", template: "log()" },
   { value: "pi", label: "Pi (π)", template: "π" },
-
 ];
 
 export type EditorContext = {
   editor: HTMLDivElement;
   savedRange: Range | null;
 };
-
-const turndownService = new TurndownService({
-  headingStyle: "atx",
-  codeBlockStyle: "fenced",
-  bulletListMarker: "-",
-  emDelimiter: "*",
-});
-
-turndownService.addRule("strikethrough", {
-  filter(node) {
-    return ["DEL", "S", "STRIKE"].includes(node.nodeName);
-  },
-  replacement(content: string) {
-    return `~~${content}~~`;
-  },
-});
 
 const restoreSelection = ({ editor, savedRange }: EditorContext) => {
   editor.focus();
@@ -97,6 +81,93 @@ const escapeHtml = (value: string) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+
+const isTransparentColor = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+
+  return (
+    normalized.length === 0 ||
+    normalized === "transparent" ||
+    normalized === "rgba(0, 0, 0, 0)" ||
+    normalized === "initial" ||
+    normalized === "inherit" ||
+    normalized === "unset" ||
+    normalized === "none" ||
+    normalized === "false"
+  );
+};
+
+const isHighlightElement = (element: HTMLElement) => {
+  if (element.tagName === "MARK") {
+    return true;
+  }
+
+  const computedBg = window.getComputedStyle(element).backgroundColor;
+  return !isTransparentColor(computedBg);
+};
+
+const clearHighlightFormatting = (context: EditorContext) => {
+  const editor = context.editor;
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  const nodesToClear: HTMLElement[] = [];
+
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_ELEMENT, {
+    acceptNode(node) {
+      if (!(node instanceof HTMLElement)) {
+        return NodeFilter.FILTER_SKIP;
+      }
+
+      if (!range.intersectsNode(node)) {
+        return NodeFilter.FILTER_SKIP;
+      }
+
+      return isHighlightElement(node)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_SKIP;
+    },
+  });
+
+  let currentNode = walker.nextNode();
+
+  while (currentNode) {
+    if (currentNode instanceof HTMLElement) {
+      nodesToClear.push(currentNode);
+    }
+
+    currentNode = walker.nextNode();
+  }
+
+  for (const element of nodesToClear) {
+    if (element.tagName === "MARK") {
+      const parent = element.parentNode;
+
+      if (!parent) {
+        continue;
+      }
+
+      while (element.firstChild) {
+        parent.insertBefore(element.firstChild, element);
+      }
+
+      parent.removeChild(element);
+      continue;
+    }
+
+    element.style.backgroundColor = "";
+
+    if (!element.getAttribute("style")?.trim()) {
+      element.removeAttribute("style");
+    }
+  }
+
+  restoreSelection(context);
+};
 
 export const editorCommands = {
   undo(context: EditorContext) {
@@ -146,6 +217,29 @@ export const editorCommands = {
     runExecCommand(context, "underline");
   },
   highlight(context: EditorContext) {
+    restoreSelection(context);
+
+    const commandValue = `${document.queryCommandValue("hiliteColor") ?? ""}`;
+    const selection = window.getSelection();
+    const anchorElement =
+      selection?.anchorNode?.nodeType === Node.TEXT_NODE
+        ? selection.anchorNode.parentElement
+        : (selection?.anchorNode as Element | null);
+    const highlightAncestor = anchorElement?.closest("mark,span");
+    const isActiveByCommand = !isTransparentColor(commandValue);
+    const isActiveByAncestor =
+      highlightAncestor instanceof HTMLElement &&
+      isHighlightElement(highlightAncestor);
+
+    const shouldRemoveHighlight = isActiveByCommand || isActiveByAncestor;
+
+    if (shouldRemoveHighlight) {
+      runExecCommand(context, "hiliteColor", "transparent");
+      runExecCommand(context, "backColor", "transparent");
+      clearHighlightFormatting(context);
+      return;
+    }
+
     runExecCommand(context, "hiliteColor", "#fff5a6");
   },
   subscript(context: EditorContext) {
@@ -185,16 +279,9 @@ export const editorCommands = {
     document.execCommand("insertText", false, expression);
   },
   markdownToHtml(markdown: string) {
-    const parsed = marked.parse(markdown, {
-      gfm: true,
-      breaks: true,
-    });
-
-    const html = typeof parsed === "string" ? parsed : "";
-
-    return DOMPurify.sanitize(html);
+    return renderMarkdownToHtml(markdown);
   },
   htmlToMarkdown(html: string) {
-    return turndownService.turndown(html);
+    return markdownUtilsHtmlToMarkdown(html);
   },
 };

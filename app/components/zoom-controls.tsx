@@ -1,4 +1,4 @@
-import { Plus, Minus } from 'lucide-react';
+import { Minus, Plus } from "lucide-react";
 
 type ZoomControlsProps = {
   zoom: number;

@@ -6,6 +6,7 @@ import {
   AlignRight,
   Bold,
   Code,
+  Highlighter,
   ImagePlus,
   Italic,
   Link2,
@@ -36,6 +37,7 @@ type EditorToolbarProps = {
     italic: boolean;
     strike: boolean;
     underline: boolean;
+    highlight: boolean;
     subscript: boolean;
     inlineCode: boolean;
     bulletList: boolean;
@@ -248,12 +250,13 @@ export default function EditorToolbar({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="icon-sm"
+            className={cn(activeState.highlight && activeButtonClass)}
             onMouseDown={stopFocusLoss}
             onClick={onHighlight}
             title="Highlight"
           >
-            HL
+            <Highlighter />
           </Button>
           <Button
             type="button"

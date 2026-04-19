@@ -28,7 +28,7 @@ const renderCalculatedLineHtml = (line: string) => {
   const prefix = line.slice(0, separatorIndex + separator.length);
   const result = line.slice(separatorIndex + separator.length);
 
-  return `${escapeHtml(prefix)}<span class="font-semibold text-emerald-600">${escapeHtml(result)}</span>`;
+  return `${escapeHtml(prefix)}<span data-calc-result="true" class="font-semibold text-emerald-600">${escapeHtml(result)}</span>`;
 };
 
 const isMarkdownTriggerInput = (event: React.FormEvent<HTMLDivElement>) => {
@@ -38,7 +38,34 @@ const isMarkdownTriggerInput = (event: React.FormEvent<HTMLDivElement>) => {
     return false;
   }
 
+  return (
+    nativeEvent.inputType === "insertText" ||
+    nativeEvent.inputType === "insertLineBreak" ||
+    nativeEvent.inputType === "insertParagraph"
+  );
+};
+
+const isSpaceInsertInput = (event: React.FormEvent<HTMLDivElement>) => {
+  const nativeEvent = event.nativeEvent;
+
+  if (!(nativeEvent instanceof InputEvent)) {
+    return false;
+  }
+
   return nativeEvent.inputType === "insertText" && nativeEvent.data === " ";
+};
+
+const isLineBreakInput = (event: React.FormEvent<HTMLDivElement>) => {
+  const nativeEvent = event.nativeEvent;
+
+  if (!(nativeEvent instanceof InputEvent)) {
+    return false;
+  }
+
+  return (
+    nativeEvent.inputType === "insertLineBreak" ||
+    nativeEvent.inputType === "insertParagraph"
+  );
 };
 
 type UseAutoTransformsParams = {
@@ -119,22 +146,34 @@ export function useAutoTransforms({
       return null;
     }
 
+    const selection = window.getSelection();
+    const liveRange =
+      selection && selection.rangeCount > 0
+        ? selection.getRangeAt(0).cloneRange()
+        : savedRangeRef.current;
+
     return {
       editor,
-      savedRange: savedRangeRef.current,
+      savedRange: liveRange,
     };
   };
 
-  const runListFromMarkdown = (type: ListType, block: HTMLElement) => {
+  const runListFromMarkdown = (
+    type: ListType,
+    block: HTMLElement,
+    content: string,
+  ) => {
+    block.textContent = content;
+    moveCursorToEnd(block);
+
     const context = getCommandContext();
 
     if (!context) {
       return false;
     }
 
-    block.textContent = "";
-    moveCursorToEnd(block);
     editorCommands.list(context, type);
+
     persistHtml();
     return true;
   };
@@ -142,15 +181,16 @@ export function useAutoTransforms({
   const runBlockFormatFromMarkdown = (
     block: HTMLElement,
     format: "blockquote" | HeadingLevel,
+    content: string,
   ) => {
+    block.textContent = content;
+    moveCursorToEnd(block);
+
     const context = getCommandContext();
 
     if (!context) {
       return false;
     }
-
-    block.textContent = "";
-    moveCursorToEnd(block);
 
     if (format === "blockquote") {
       editorCommands.blockquote(context);
@@ -169,7 +209,20 @@ export function useAutoTransforms({
       return false;
     }
 
-    const block = getActiveBlock();
+    let block = getActiveBlock();
+
+    // Ao pressionar Enter, o browser pode mover o cursor para um novo paragrafo vazio.
+    // Nesse caso, tentamos aplicar a transformacao no bloco anterior que contem o markdown.
+    if (block && isLineBreakInput(event) && block.innerText.trim() === "") {
+      const previousBlock = block.previousElementSibling;
+
+      if (
+        previousBlock instanceof HTMLElement &&
+        ["P", "DIV"].includes(previousBlock.tagName)
+      ) {
+        block = previousBlock;
+      }
+    }
 
     if (!block || !["P", "DIV"].includes(block.tagName)) {
       return false;
@@ -177,11 +230,28 @@ export function useAutoTransforms({
 
     const rawLine = block.innerText.replaceAll("\u00A0", " ");
 
-    const headingMatch = rawLine.match(/^\s{0,3}(#{1,4})\s$/);
+    // Heading estilo Notion: converte em "## " e mantém quando vira "## Título"
+    const headingEmptyMatch = rawLine.match(/^\s{0,3}(#{1,4})\s$/);
+    if (headingEmptyMatch?.[1] && isSpaceInsertInput(event)) {
+      isApplyingAutoMarkdownRef.current = true;
+      const level =
+        `h${Math.min(4, headingEmptyMatch[1].length)}` as HeadingLevel;
+      const converted = runBlockFormatFromMarkdown(block, level, "");
+
+      window.setTimeout(() => {
+        isApplyingAutoMarkdownRef.current = false;
+      }, 0);
+
+      return converted;
+    }
+
+    const headingMatch = rawLine.match(/^\s{0,3}(#{1,4})\s+(.+?)$/);
     if (headingMatch?.[1]) {
       isApplyingAutoMarkdownRef.current = true;
       const level = `h${Math.min(4, headingMatch[1].length)}` as HeadingLevel;
-      const converted = runBlockFormatFromMarkdown(block, level);
+      const title = headingMatch[2].trim();
+
+      const converted = runBlockFormatFromMarkdown(block, level, title);
 
       window.setTimeout(() => {
         isApplyingAutoMarkdownRef.current = false;
@@ -190,10 +260,16 @@ export function useAutoTransforms({
       return converted;
     }
 
-    const quoteMatch = rawLine.match(/^\s{0,3}>\s$/);
+    // Blockquote: "> Citação"
+    const quoteMatch = rawLine.match(/^\s{0,3}>\s+(.+?)$/);
     if (quoteMatch) {
       isApplyingAutoMarkdownRef.current = true;
-      const converted = runBlockFormatFromMarkdown(block, "blockquote");
+      const quoteText = quoteMatch[1].trim();
+      const converted = runBlockFormatFromMarkdown(
+        block,
+        "blockquote",
+        quoteText,
+      );
 
       window.setTimeout(() => {
         isApplyingAutoMarkdownRef.current = false;
@@ -202,10 +278,11 @@ export function useAutoTransforms({
       return converted;
     }
 
-    const ulMatch = rawLine.match(/^\s{0,3}[-*]\s$/);
-    if (ulMatch) {
+    // Unordered list: "- Item" ou "* Item"
+    const ulEmptyMatch = rawLine.match(/^\s{0,3}[-*]\s$/);
+    if (ulEmptyMatch && isSpaceInsertInput(event)) {
       isApplyingAutoMarkdownRef.current = true;
-      const converted = runListFromMarkdown("bullet", block);
+      const converted = runListFromMarkdown("bullet", block, "");
 
       window.setTimeout(() => {
         isApplyingAutoMarkdownRef.current = false;
@@ -214,10 +291,37 @@ export function useAutoTransforms({
       return converted;
     }
 
-    const olMatch = rawLine.match(/^\s{0,3}\d+\.\s$/);
-    if (olMatch) {
+    const ulMatch = rawLine.match(/^\s{0,3}[-*]\s+(.+?)$/);
+    if (ulMatch && isLineBreakInput(event)) {
       isApplyingAutoMarkdownRef.current = true;
-      const converted = runListFromMarkdown("ordered", block);
+      const itemText = ulMatch[1].trim();
+      const converted = runListFromMarkdown("bullet", block, itemText);
+
+      window.setTimeout(() => {
+        isApplyingAutoMarkdownRef.current = false;
+      }, 0);
+
+      return converted;
+    }
+
+    // Ordered list: "1. Item"
+    const olEmptyMatch = rawLine.match(/^\s{0,3}1\.\s$/);
+    if (olEmptyMatch && isSpaceInsertInput(event)) {
+      isApplyingAutoMarkdownRef.current = true;
+      const converted = runListFromMarkdown("ordered", block, "");
+
+      window.setTimeout(() => {
+        isApplyingAutoMarkdownRef.current = false;
+      }, 0);
+
+      return converted;
+    }
+
+    const olMatch = rawLine.match(/^\s{0,3}\d+\.\s+(.+?)$/);
+    if (olMatch && isLineBreakInput(event)) {
+      isApplyingAutoMarkdownRef.current = true;
+      const itemText = olMatch[1].trim();
+      const converted = runListFromMarkdown("ordered", block, itemText);
 
       window.setTimeout(() => {
         isApplyingAutoMarkdownRef.current = false;
@@ -265,10 +369,47 @@ export function useAutoTransforms({
     return true;
   };
 
+  const removeInheritedCalculationStyleOnActiveBlock = () => {
+    const block = getActiveBlock();
+
+    if (!block) {
+      return false;
+    }
+
+    const rawLine = block.innerText.replaceAll("\u00A0", " ").trim();
+    const hasTriggerLine = rawLine.includes("=") && /[+\-*/^%]/.test(rawLine);
+
+    if (hasTriggerLine) {
+      return false;
+    }
+
+    const hasCalcDecoration = Boolean(
+      block.querySelector('[data-calc-result="true"], span.text-emerald-600'),
+    );
+
+    if (!hasCalcDecoration) {
+      return false;
+    }
+
+    const plainText = block.innerText.replaceAll("\u00A0", " ");
+    block.textContent = plainText;
+    moveCursorToEnd(block);
+    persistHtml();
+
+    return true;
+  };
+
   const handleInputTransform = (event: React.FormEvent<HTMLDivElement>) => {
     const hasMarkdownTransform = applyAutoMarkdownOnActiveBlock(event);
 
     if (hasMarkdownTransform) {
+      return;
+    }
+
+    const hasInheritedCalcStyle =
+      removeInheritedCalculationStyleOnActiveBlock();
+
+    if (hasInheritedCalcStyle) {
       return;
     }
 

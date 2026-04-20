@@ -13,6 +13,7 @@ import EditorToolbar from "./editor-toolbar";
 import { useAutoTransforms } from "./hooks/use-auto-transforms";
 import { useEditorSession } from "./hooks/use-editor-session";
 import { useMarkdownRenderer } from "./hooks/use-markdown-renderer";
+import ImageDialog from "./image-dialog";
 import LinkDialog from "./link-dialog";
 import ZoomControls from "./zoom-controls";
 
@@ -28,6 +29,7 @@ export default function Editor() {
   } = useEditorSession();
 
   const [zoom, setZoom] = useState(100);
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("https://");
   const [openLinkInNewTab, setOpenLinkInNewTab] = useState(true);
@@ -208,13 +210,18 @@ export default function Editor() {
   };
 
   const handleImage = () => {
-    const src = window.prompt("Digite a URL da imagem:", "https://");
+    updateSavedRange();
+    setIsImageDialogOpen(true);
+  };
 
-    if (!src) {
-      return;
-    }
-
+  const handleInsertImage = (src: string) => {
     run((context) => editorCommands.image(context, src));
+    setIsImageDialogOpen(false);
+  };
+
+  const handleRemoveImage = () => {
+    run((context) => editorCommands.removeImage(context));
+    setIsImageDialogOpen(false);
   };
 
   const handleMathChange = (value: string) => {
@@ -344,6 +351,107 @@ export default function Editor() {
     return null;
   };
 
+  const findDeletableImageNodeFromSelection = () => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    const getElementFromNode = (node: Node | null) => {
+      if (!node) {
+        return null;
+      }
+
+      return node.nodeType === Node.TEXT_NODE
+        ? node.parentElement
+        : (node as Element);
+    };
+
+    const isImageOnlyElement = (element: HTMLElement) => {
+      const image = element.querySelector("img");
+
+      if (!image) {
+        return false;
+      }
+
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("img,br").forEach((node) => {
+        node.remove();
+      });
+
+      const remainingText = clone.textContent?.replaceAll("\u00A0", " ").trim();
+
+      return !remainingText;
+    };
+
+    const candidateNodes: Array<Node | null> = [
+      range.startContainer,
+      range.endContainer,
+      selection.anchorNode,
+      selection.focusNode,
+      range.commonAncestorContainer,
+    ];
+
+    for (const candidateNode of candidateNodes) {
+      const candidateElement = getElementFromNode(candidateNode);
+      const closestImage = candidateElement?.closest("img");
+
+      if (
+        closestImage instanceof HTMLElement &&
+        editor.contains(closestImage)
+      ) {
+        const imageBlock = closestImage.closest("p,div,li,blockquote");
+
+        if (
+          imageBlock instanceof HTMLElement &&
+          editor.contains(imageBlock) &&
+          isImageOnlyElement(imageBlock)
+        ) {
+          return imageBlock;
+        }
+
+        return closestImage;
+      }
+
+      const possibleBlock = candidateElement?.closest("p,div,li,blockquote");
+
+      if (
+        possibleBlock instanceof HTMLElement &&
+        editor.contains(possibleBlock) &&
+        isImageOnlyElement(possibleBlock)
+      ) {
+        return possibleBlock;
+      }
+    }
+
+    if (range.startContainer === editor) {
+      const siblings = [
+        editor.childNodes[range.startOffset - 1],
+        editor.childNodes[range.startOffset],
+      ];
+
+      for (const sibling of siblings) {
+        if (sibling instanceof HTMLImageElement) {
+          return sibling;
+        }
+
+        if (
+          sibling instanceof HTMLElement &&
+          editor.contains(sibling) &&
+          isImageOnlyElement(sibling)
+        ) {
+          return sibling;
+        }
+      }
+    }
+
+    return null;
+  };
+
   const insertLineBreakInsideCodeBlock = () => {
     const selection = window.getSelection();
 
@@ -393,6 +501,42 @@ export default function Editor() {
   };
 
   const handleEditorKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Backspace" || event.key === "Delete") {
+      const editor = editorRef.current;
+      const selection = window.getSelection();
+
+      if (!editor || !selection || selection.rangeCount === 0) {
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+
+      if (
+        !selection.isCollapsed &&
+        editor.contains(range.commonAncestorContainer)
+      ) {
+        const intersectedImages = [...editor.querySelectorAll("img")].filter(
+          (image) => range.intersectsNode(image),
+        );
+
+        if (intersectedImages.length > 0) {
+          event.preventDefault();
+          run((context) => editorCommands.removeImage(context));
+          return;
+        }
+      }
+
+      if (selection.isCollapsed) {
+        const deletableNode = findDeletableImageNodeFromSelection();
+
+        if (deletableNode) {
+          event.preventDefault();
+          run((context) => editorCommands.removeImage(context));
+          return;
+        }
+      }
+    }
+
     if (event.key !== "Enter") {
       return;
     }
@@ -486,7 +630,7 @@ export default function Editor() {
           {/* biome-ignore lint/a11y/noStaticElementInteractions: um editor rich text obrigatoriamente precisa usar uma div com contentEditable. */}
           <div
             ref={editorRef}
-            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-black [&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline [&_a]:decoration-blue-500 [&_a]:underline-offset-2 [&_a:hover]:text-blue-700 [&_a:visited]:text-indigo-600 [&_code]:border [&_code]:border-zinc-300 [&_code]:bg-zinc-100 [&_code]:text-zinc-800 [&_code]:rounded-[6px] [&_code]:px-[0.2em] [&_code]:py-[0.1em] [&_code]:font-mono [&_code]:text-[0.875em] [&_code]:leading-[1.4] [&_h1]:mt-6 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:text-xl [&_h4]:font-semibold [&_p]:mt-5 [&_p]:text-base [&_p]:font-normal [&_p]:leading-[1.6] [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mt-6 [&_ul]:mb-6 [&_li]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100 [&_pre_code]:border-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:rounded-none [&_pre_code]:text-inherit [&_pre_code]:font-inherit"
+            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-black [&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline [&_a]:decoration-blue-500 [&_a]:underline-offset-2 [&_a:hover]:text-blue-700 [&_a:visited]:text-indigo-600 [&_img]:my-3 [&_img]:max-h-[420px] [&_img]:max-w-full [&_img]:rounded-xl [&_img]:object-contain [&_code]:border [&_code]:border-zinc-300 [&_code]:bg-zinc-100 [&_code]:text-zinc-800 [&_code]:rounded-[6px] [&_code]:px-[0.2em] [&_code]:py-[0.1em] [&_code]:font-mono [&_code]:text-[0.875em] [&_code]:leading-[1.4] [&_h1]:mt-6 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:text-xl [&_h4]:font-semibold [&_p]:mt-5 [&_p]:text-base [&_p]:font-normal [&_p]:leading-[1.6] [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mt-6 [&_ul]:mb-6 [&_li]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100 [&_pre_code]:border-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:rounded-none [&_pre_code]:text-inherit [&_pre_code]:font-inherit"
             data-placeholder="Digite algum texto..."
             contentEditable
             suppressContentEditableWarning
@@ -524,6 +668,13 @@ export default function Editor() {
             onOpenInNewTabChange={setOpenLinkInNewTab}
             onApplyLink={handleApplyLink}
             onRemoveLink={handleRemoveLink}
+          />
+
+          <ImageDialog
+            open={isImageDialogOpen}
+            onOpenChange={setIsImageDialogOpen}
+            onInsertImage={handleInsertImage}
+            onRemoveImage={handleRemoveImage}
           />
         </div>
       </div>

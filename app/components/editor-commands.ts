@@ -43,6 +43,13 @@ type LinkOptions = {
   openInNewTab?: boolean;
 };
 
+const escapeHtmlAttribute = (value: string) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
 const restoreSelection = ({ editor, savedRange }: EditorContext) => {
   editor.focus();
 
@@ -288,6 +295,95 @@ const collectLinksFromCurrentSelection = (editor: HTMLDivElement) => {
   return [...links];
 };
 
+const isImageOnlyElement = (element: HTMLElement) => {
+  const image = element.querySelector("img");
+
+  if (!image) {
+    return false;
+  }
+
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("img,br").forEach((node) => {
+    node.remove();
+  });
+
+  const remainingText = clone.textContent?.replaceAll("\u00A0", " ").trim();
+
+  return !remainingText;
+};
+
+const getImageTargetsFromSelection = (editor: HTMLDivElement) => {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return [];
+  }
+
+  const range = selection.getRangeAt(0);
+  const targets = new Set<HTMLElement>();
+
+  const intersectedImages = [...editor.querySelectorAll("img")].filter((img) =>
+    range.intersectsNode(img),
+  );
+
+  for (const image of intersectedImages) {
+    targets.add(image);
+  }
+
+  const anchorElement = getSelectionElement(selection.anchorNode);
+  const directImage = anchorElement?.closest("img");
+
+  if (directImage instanceof HTMLElement && editor.contains(directImage)) {
+    targets.add(directImage);
+  }
+
+  const currentBlock = anchorElement?.closest("p,div,li,blockquote");
+
+  if (
+    currentBlock instanceof HTMLElement &&
+    editor.contains(currentBlock) &&
+    isImageOnlyElement(currentBlock)
+  ) {
+    targets.add(currentBlock);
+  }
+
+  if (range.startContainer === editor) {
+    const siblings = [
+      editor.childNodes[range.startOffset - 1],
+      editor.childNodes[range.startOffset],
+    ];
+
+    for (const sibling of siblings) {
+      if (sibling instanceof HTMLElement) {
+        if (sibling.tagName === "IMG") {
+          targets.add(sibling);
+          continue;
+        }
+
+        if (isImageOnlyElement(sibling)) {
+          targets.add(sibling);
+        }
+      }
+    }
+  }
+
+  return [...targets];
+};
+
+const deleteNodeWithHistory = (target: HTMLElement) => {
+  const selection = window.getSelection();
+
+  if (!selection) {
+    return;
+  }
+
+  const range = document.createRange();
+  range.selectNode(target);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  document.execCommand("delete", false);
+};
+
 export const editorCommands = {
   undo(context: EditorContext) {
     runExecCommand(context, "undo");
@@ -461,7 +557,41 @@ export const editorCommands = {
     runExecCommand(context, "unlink");
   },
   image(context: EditorContext, src: string) {
-    runExecCommand(context, "insertImage", src);
+    const escapedSrc = escapeHtmlAttribute(src);
+    const imageHtml =
+      `<p data-editor-image-line="true">` +
+      `<img src="${escapedSrc}" alt="Imagem" width="560" data-editor-image="true" style="max-width:100%;height:auto;border-radius:12px;display:block;" />` +
+      `</p><p><br></p>`;
+
+    runExecCommand(context, "insertHTML", imageHtml);
+  },
+  removeImage(context: EditorContext) {
+    restoreSelection(context);
+
+    const targets = getImageTargetsFromSelection(context.editor);
+
+    if (targets.length === 0) {
+      return;
+    }
+
+    for (const target of targets) {
+      const imageLine = target.closest("p,div,li,blockquote");
+
+      if (
+        imageLine instanceof HTMLElement &&
+        context.editor.contains(imageLine) &&
+        isImageOnlyElement(imageLine)
+      ) {
+        deleteNodeWithHistory(imageLine);
+        continue;
+      }
+
+      deleteNodeWithHistory(target);
+    }
+
+    if (context.editor.innerHTML.trim() === "") {
+      context.editor.innerHTML = "<p><br></p>";
+    }
   },
   insertMath(context: EditorContext, expression: string) {
     restoreSelection(context);

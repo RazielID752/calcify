@@ -39,6 +39,10 @@ export type EditorContext = {
   savedRange: Range | null;
 };
 
+type LinkOptions = {
+  openInNewTab?: boolean;
+};
+
 const restoreSelection = ({ editor, savedRange }: EditorContext) => {
   editor.focus();
 
@@ -245,6 +249,45 @@ const clearHighlightFormatting = (context: EditorContext) => {
   restoreSelection(context);
 };
 
+const collectLinksFromCurrentSelection = (editor: HTMLDivElement) => {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return [];
+  }
+
+  const range = selection.getRangeAt(0);
+  const links = new Set<HTMLAnchorElement>();
+
+  const addClosestAnchorFromNode = (node: Node | null) => {
+    const element = getSelectionElement(node);
+    const closestAnchor = element?.closest("a");
+
+    if (
+      closestAnchor instanceof HTMLAnchorElement &&
+      editor.contains(closestAnchor)
+    ) {
+      links.add(closestAnchor);
+    }
+  };
+
+  addClosestAnchorFromNode(selection.anchorNode);
+  addClosestAnchorFromNode(selection.focusNode);
+  addClosestAnchorFromNode(range.commonAncestorContainer);
+
+  const rangeRoot = getSelectionElement(range.commonAncestorContainer);
+  const searchRoot = rangeRoot instanceof HTMLElement ? rangeRoot : editor;
+  const anchors = searchRoot.querySelectorAll("a");
+
+  for (const anchor of anchors) {
+    if (editor.contains(anchor) && range.intersectsNode(anchor)) {
+      links.add(anchor);
+    }
+  }
+
+  return [...links];
+};
+
 export const editorCommands = {
   undo(context: EditorContext) {
     runExecCommand(context, "undo");
@@ -386,8 +429,36 @@ export const editorCommands = {
     selection.removeAllRanges();
     selection.addRange(caretRange);
   },
-  link(context: EditorContext, href: string) {
+  link(context: EditorContext, href: string, options?: LinkOptions) {
     runExecCommand(context, "createLink", href);
+
+    const links = collectLinksFromCurrentSelection(context.editor);
+    const openInNewTab = Boolean(options?.openInNewTab);
+
+    for (const link of links) {
+      if (openInNewTab) {
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+      } else {
+        link.removeAttribute("target");
+        link.removeAttribute("rel");
+      }
+    }
+  },
+  unlink(context: EditorContext) {
+    restoreSelection(context);
+
+    const links = collectLinksFromCurrentSelection(context.editor);
+
+    if (links.length > 0) {
+      for (const link of links) {
+        unwrapElement(link);
+      }
+
+      return;
+    }
+
+    runExecCommand(context, "unlink");
   },
   image(context: EditorContext, src: string) {
     runExecCommand(context, "insertImage", src);

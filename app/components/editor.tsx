@@ -13,6 +13,7 @@ import EditorToolbar from "./editor-toolbar";
 import { useAutoTransforms } from "./hooks/use-auto-transforms";
 import { useEditorSession } from "./hooks/use-editor-session";
 import { useMarkdownRenderer } from "./hooks/use-markdown-renderer";
+import LinkDialog from "./link-dialog";
 import ZoomControls from "./zoom-controls";
 
 export default function Editor() {
@@ -27,6 +28,9 @@ export default function Editor() {
   } = useEditorSession();
 
   const [zoom, setZoom] = useState(100);
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("https://");
+  const [openLinkInNewTab, setOpenLinkInNewTab] = useState(true);
 
   const [toolbarState, setToolbarState] = useState({
     bold: false,
@@ -178,13 +182,29 @@ export default function Editor() {
   };
 
   const handleLink = () => {
-    const href = window.prompt("Digite a URL do link:", "https://");
+    updateSavedRange();
+    setLinkUrl("https://");
+    setOpenLinkInNewTab(true);
+    setIsLinkDialogOpen(true);
+  };
+
+  const handleApplyLink = () => {
+    const href = linkUrl.trim();
 
     if (!href) {
       return;
     }
 
-    run((context) => editorCommands.link(context, href));
+    run((context) =>
+      editorCommands.link(context, href, { openInNewTab: openLinkInNewTab }),
+    );
+
+    setIsLinkDialogOpen(false);
+  };
+
+  const handleRemoveLink = () => {
+    run((context) => editorCommands.unlink(context));
+    setIsLinkDialogOpen(false);
   };
 
   const handleImage = () => {
@@ -466,7 +486,7 @@ export default function Editor() {
           {/* biome-ignore lint/a11y/noStaticElementInteractions: um editor rich text obrigatoriamente precisa usar uma div com contentEditable. */}
           <div
             ref={editorRef}
-            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-black [&_code]:border [&_code]:border-zinc-300 [&_code]:bg-zinc-100 [&_code]:text-zinc-800 [&_code]:rounded-[6px] [&_code]:px-[0.2em] [&_code]:py-[0.1em] [&_code]:font-mono [&_code]:text-[0.875em] [&_code]:leading-[1.4] [&_h1]:mt-6 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:text-xl [&_h4]:font-semibold [&_p]:mt-5 [&_p]:text-base [&_p]:font-normal [&_p]:leading-[1.6] [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mt-6 [&_ul]:mb-6 [&_li]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100 [&_pre_code]:border-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:rounded-none [&_pre_code]:text-inherit [&_pre_code]:font-inherit"
+            className="mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none empty:before:text-zinc-400 [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_blockquote]:text-black [&_a]:font-medium [&_a]:text-blue-600 [&_a]:underline [&_a]:decoration-blue-500 [&_a]:underline-offset-2 [&_a:hover]:text-blue-700 [&_a:visited]:text-indigo-600 [&_code]:border [&_code]:border-zinc-300 [&_code]:bg-zinc-100 [&_code]:text-zinc-800 [&_code]:rounded-[6px] [&_code]:px-[0.2em] [&_code]:py-[0.1em] [&_code]:font-mono [&_code]:text-[0.875em] [&_code]:leading-[1.4] [&_h1]:mt-6 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mt-5 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:text-xl [&_h4]:font-semibold [&_p]:mt-5 [&_p]:text-base [&_p]:font-normal [&_p]:leading-[1.6] [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mt-6 [&_ul]:mb-6 [&_li]:my-1 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-zinc-950 [&_pre]:p-4 [&_pre]:text-zinc-100 [&_pre_code]:border-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:rounded-none [&_pre_code]:text-inherit [&_pre_code]:font-inherit"
             data-placeholder="Digite algum texto..."
             contentEditable
             suppressContentEditableWarning
@@ -493,6 +513,17 @@ export default function Editor() {
               persistHtml();
               syncToolbarState();
             }}
+          />
+
+          <LinkDialog
+            open={isLinkDialogOpen}
+            onOpenChange={setIsLinkDialogOpen}
+            linkUrl={linkUrl}
+            onLinkUrlChange={setLinkUrl}
+            openInNewTab={openLinkInNewTab}
+            onOpenInNewTabChange={setOpenLinkInNewTab}
+            onApplyLink={handleApplyLink}
+            onRemoveLink={handleRemoveLink}
           />
         </div>
       </div>

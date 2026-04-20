@@ -155,11 +155,16 @@ export function useEditorSession() {
     const liveRange =
       selection && selection.rangeCount > 0
         ? selection.getRangeAt(0).cloneRange()
+        : null;
+
+    const activeRange =
+      liveRange && editor.contains(liveRange.commonAncestorContainer)
+        ? liveRange
         : savedRangeRef.current;
 
     return {
       editor,
-      savedRange: liveRange,
+      savedRange: activeRange,
     };
   }, []);
 

@@ -33,6 +33,7 @@ type Document = {
 const DEFAULT_DOCUMENT_TITLE = "documento sem título";
 const MAX_AUTO_TITLE_LENGTH = 32;
 const FIRST_ACCESS_WELCOME_KEY = "calcify_first_access_welcome_seen_v1";
+const INITIAL_DOCUMENT_ID = "initial-document";
 
 const FIRST_ACCESS_WELCOME_MARKDOWN = `# Marcos Nathanael
 
@@ -103,20 +104,26 @@ const createDocumentId = () =>
   globalThis.crypto?.randomUUID?.() ??
   `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-const createBlankDocument = (initialTitle = ""): Document => {
+const createBlankDocument = (
+  initialTitle = "",
+  options?: { fixedId?: string },
+): Document => {
   const normalizedTitle = trimAndCollapseWhitespace(initialTitle);
+  const fixedId = options?.fixedId;
 
   return {
-    id: createDocumentId(),
+    id: fixedId ?? createDocumentId(),
     title: normalizedTitle || DEFAULT_DOCUMENT_TITLE,
     content: "",
-    createdAt: new Date(),
+    createdAt: fixedId ? new Date(0) : new Date(),
     titleMode: normalizedTitle ? "manual" : "auto",
   };
 };
 
 export default function Editor() {
-  const initialDocumentRef = useRef<Document>(createBlankDocument());
+  const initialDocumentRef = useRef<Document>(
+    createBlankDocument("", { fixedId: INITIAL_DOCUMENT_ID }),
+  );
   const [documents, setDocuments] = useState<Document[]>(() => [
     initialDocumentRef.current,
   ]);

@@ -407,8 +407,13 @@ export const useBlockDragAndDrop = ({
 
       const editor = editorRef.current;
       const source = hoveredDragBlockRef.current;
+      const isDraggableSource =
+        !!editor &&
+        !!source &&
+        (isTopLevelDraggableBlock(editor, source) ||
+          isDraggableListItem(editor, source));
 
-      if (!editor || !source || !isTopLevelDraggableBlock(editor, source)) {
+      if (!isDraggableSource || !editor || !source) {
         return;
       }
 
@@ -438,6 +443,7 @@ export const useBlockDragAndDrop = ({
       clearHoveredDragBlock,
       editorRef,
       finishBlockDrag,
+      isDraggableListItem,
       isTopLevelDraggableBlock,
       removeDragListeners,
       updateDragInsertionByPointer,

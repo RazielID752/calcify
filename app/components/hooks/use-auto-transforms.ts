@@ -430,8 +430,14 @@ export function useAutoTransforms({
     return false;
   };
 
-  const applyAutoCalculationOnActiveBlock = () => {
+  const applyAutoCalculationOnActiveBlock = (
+    event: React.FormEvent<HTMLDivElement>,
+  ) => {
     if (isApplyingAutoCalcRef.current) {
+      return false;
+    }
+
+    if (isLineBreakInput(event)) {
       return false;
     }
 
@@ -583,7 +589,7 @@ export function useAutoTransforms({
       return;
     }
 
-    const hasCalculationTransform = applyAutoCalculationOnActiveBlock();
+    const hasCalculationTransform = applyAutoCalculationOnActiveBlock(event);
 
     if (hasCalculationTransform) {
       return;

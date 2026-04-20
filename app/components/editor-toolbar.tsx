@@ -17,6 +17,7 @@ import {
   SquareCode,
   Strikethrough,
   Subscript,
+  Superscript,
   Underline,
   Undo2,
 } from "lucide-react";
@@ -39,6 +40,7 @@ type EditorToolbarProps = {
     underline: boolean;
     highlight: boolean;
     subscript: boolean;
+    superscript: boolean;
     inlineCode: boolean;
     bulletList: boolean;
     orderedList: boolean;
@@ -61,6 +63,7 @@ type EditorToolbarProps = {
   onHighlight: () => void;
   onLink: () => void;
   onSubscript: () => void;
+  onSuperscript: () => void;
   onAlignLeft: () => void;
   onAlignCenter: () => void;
   onAlignRight: () => void;
@@ -95,6 +98,7 @@ export default function EditorToolbar({
   onHighlight,
   onLink,
   onSubscript,
+  onSuperscript,
   onAlignLeft,
   onAlignCenter,
   onAlignRight,
@@ -278,6 +282,17 @@ export default function EditorToolbar({
             title="Subscript"
           >
             <Subscript />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            className={cn(activeState.superscript && activeButtonClass)}
+            onMouseDown={stopFocusLoss}
+            onClick={onSuperscript}
+            title="Superscript"
+          >
+            <Superscript />
           </Button>
         </div>
 

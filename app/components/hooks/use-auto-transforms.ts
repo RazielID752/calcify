@@ -68,6 +68,16 @@ const isLineBreakInput = (event: React.FormEvent<HTMLDivElement>) => {
   );
 };
 
+const isTypographicTriggerInput = (event: React.FormEvent<HTMLDivElement>) => {
+  const nativeEvent = event.nativeEvent;
+
+  if (!(nativeEvent instanceof InputEvent)) {
+    return false;
+  }
+
+  return nativeEvent.inputType === "insertText" && nativeEvent.data === ">";
+};
+
 type UseAutoTransformsParams = {
   editorRef: React.RefObject<HTMLDivElement | null>;
   savedRangeRef: React.RefObject<Range | null>;
@@ -399,10 +409,76 @@ export function useAutoTransforms({
     return true;
   };
 
+  const applyTypographicConversionOnActiveBlock = (
+    event: React.FormEvent<HTMLDivElement>,
+  ) => {
+    if (!isTypographicTriggerInput(event)) {
+      return false;
+    }
+
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection || selection.rangeCount === 0) {
+      return false;
+    }
+
+    if (!selection.isCollapsed) {
+      return false;
+    }
+
+    const anchorNode = selection.anchorNode;
+
+    if (!(anchorNode instanceof Text)) {
+      return false;
+    }
+
+    const anchorElement = anchorNode.parentElement;
+
+    if (!anchorElement) {
+      return false;
+    }
+
+    if (anchorElement.closest("code,pre")) {
+      return false;
+    }
+
+    const anchorOffset = selection.anchorOffset;
+
+    if (anchorOffset < 2) {
+      return false;
+    }
+
+    const pair = anchorNode.data.slice(anchorOffset - 2, anchorOffset);
+
+    if (pair !== "->") {
+      return false;
+    }
+
+    anchorNode.deleteData(anchorOffset - 2, 2);
+    anchorNode.insertData(anchorOffset - 2, "→");
+
+    const range = document.createRange();
+    range.setStart(anchorNode, anchorOffset - 1);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    persistHtml();
+    return true;
+  };
+
   const handleInputTransform = (event: React.FormEvent<HTMLDivElement>) => {
     const hasMarkdownTransform = applyAutoMarkdownOnActiveBlock(event);
 
     if (hasMarkdownTransform) {
+      return;
+    }
+
+    const hasTypographicTransform =
+      applyTypographicConversionOnActiveBlock(event);
+
+    if (hasTypographicTransform) {
       return;
     }
 

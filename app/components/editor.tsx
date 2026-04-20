@@ -35,6 +35,7 @@ export default function Editor() {
     underline: false,
     highlight: false,
     subscript: false,
+    superscript: false,
     inlineCode: false,
     bulletList: false,
     orderedList: false,
@@ -119,6 +120,7 @@ export default function Editor() {
       underline: document.queryCommandState("underline"),
       highlight: isHighlighted,
       subscript: document.queryCommandState("subscript"),
+      superscript: document.queryCommandState("superscript"),
       inlineCode: Boolean(selectionElement?.closest("code")),
       bulletList: document.queryCommandState("insertUnorderedList"),
       orderedList: document.queryCommandState("insertOrderedList"),
@@ -323,6 +325,9 @@ export default function Editor() {
           onLink={handleLink}
           onSubscript={() =>
             run((context) => editorCommands.subscript(context))
+          }
+          onSuperscript={() =>
+            run((context) => editorCommands.superscript(context))
           }
           onAlignLeft={() => handleAlign("left")}
           onAlignCenter={() => handleAlign("center")}

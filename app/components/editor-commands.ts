@@ -74,6 +74,90 @@ const runExecCommand = (
   document.execCommand(command, false, value);
 };
 
+const unwrapElement = (element: HTMLElement) => {
+  const parent = element.parentNode;
+
+  if (!parent) {
+    return;
+  }
+
+  while (element.firstChild) {
+    parent.insertBefore(element.firstChild, element);
+  }
+
+  parent.removeChild(element);
+};
+
+const getSelectionElement = (node: Node | null) => {
+  if (!node) {
+    return null;
+  }
+
+  return node.nodeType === Node.TEXT_NODE
+    ? node.parentElement
+    : (node as Element);
+};
+
+const findScriptAncestor = (
+  element: Element | null,
+  editor: HTMLElement,
+  type: "subscript" | "superscript",
+) => {
+  if (!element) {
+    return null;
+  }
+
+  const expectedTag = type === "subscript" ? "SUB" : "SUP";
+  const expectedVerticalAlign = type === "subscript" ? "sub" : "super";
+
+  let current: Element | null = element;
+
+  while (current && current !== editor) {
+    if (current instanceof HTMLElement) {
+      if (current.tagName === expectedTag) {
+        return current;
+      }
+
+      if (
+        current.style.verticalAlign.trim().toLowerCase() ===
+        expectedVerticalAlign
+      ) {
+        return current;
+      }
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+};
+
+const toggleScriptCommand = (
+  context: EditorContext,
+  type: "subscript" | "superscript",
+) => {
+  restoreSelection(context);
+
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const anchorElement = getSelectionElement(selection.anchorNode);
+  const focusElement = getSelectionElement(selection.focusNode);
+  const activeAncestor =
+    findScriptAncestor(anchorElement, context.editor, type) ??
+    findScriptAncestor(focusElement, context.editor, type);
+
+  if (activeAncestor && context.editor.contains(activeAncestor)) {
+    unwrapElement(activeAncestor);
+    return;
+  }
+
+  runExecCommand(context, type);
+};
+
 const isTransparentColor = (value: string) => {
   const normalized = value.trim().toLowerCase();
 
@@ -235,7 +319,10 @@ export const editorCommands = {
     runExecCommand(context, "hiliteColor", "#fff5a6");
   },
   subscript(context: EditorContext) {
-    runExecCommand(context, "subscript");
+    toggleScriptCommand(context, "subscript");
+  },
+  superscript(context: EditorContext) {
+    toggleScriptCommand(context, "superscript");
   },
   align(context: EditorContext, align: AlignType) {
     const command =

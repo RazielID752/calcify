@@ -111,9 +111,9 @@ export default function EditorToolbar({
     "flex shrink-0 snap-start items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-1 py-1 [&_button[data-size='icon-sm']]:size-9 sm:[&_button[data-size='icon-sm']]:size-8";
 
   return (
-    <div className="sticky top-3 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur">
+    <div className="sticky top-[3.75rem] z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur sm:top-[4.25rem]">
       <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex min-w-max snap-x snap-mandatory items-center justify-start gap-2 sm:gap-3">
+        <div className="flex  md:justify-between min-w-max snap-x snap-mandatory items-center justify-start gap-2 sm:gap-3">
           <div className="shrink-0">
             <h3 className="text-base font-semibold text-zinc-900 sm:text-lg">
               Calcify

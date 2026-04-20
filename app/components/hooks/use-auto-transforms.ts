@@ -78,6 +78,16 @@ const isTypographicTriggerInput = (event: React.FormEvent<HTMLDivElement>) => {
   return nativeEvent.inputType === "insertText" && nativeEvent.data === ">";
 };
 
+const isFormattingInput = (event: React.FormEvent<HTMLDivElement>) => {
+  const nativeEvent = event.nativeEvent;
+
+  if (!(nativeEvent instanceof InputEvent)) {
+    return false;
+  }
+
+  return nativeEvent.inputType.startsWith("format");
+};
+
 type UseAutoTransformsParams = {
   editorRef: React.RefObject<HTMLDivElement | null>;
   savedRangeRef: React.RefObject<Range | null>;
@@ -93,6 +103,76 @@ export function useAutoTransforms({
 }: UseAutoTransformsParams) {
   const isApplyingAutoCalcRef = useRef(false);
   const isApplyingAutoMarkdownRef = useRef(false);
+
+  const normalizeParagraphDivOnActiveBlock = () => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const anchorNode = selection.anchorNode;
+
+    if (!anchorNode) {
+      return false;
+    }
+
+    const anchorElement =
+      anchorNode.nodeType === Node.TEXT_NODE
+        ? anchorNode.parentElement
+        : (anchorNode as Element);
+
+    if (!anchorElement) {
+      return false;
+    }
+
+    const block = anchorElement.closest("p,div,h1,h2,h3,h4,blockquote,pre,li");
+
+    if (!(block instanceof HTMLElement) || block.tagName !== "DIV") {
+      return false;
+    }
+
+    if (block.parentElement !== editor) {
+      return false;
+    }
+
+    if (block.closest("blockquote,li,pre")) {
+      return false;
+    }
+
+    const hasNestedBlockChildren = [...block.children].some((child) =>
+      [
+        "P",
+        "DIV",
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "UL",
+        "OL",
+        "LI",
+        "BLOCKQUOTE",
+        "PRE",
+        "TABLE",
+      ].includes(child.tagName),
+    );
+
+    if (hasNestedBlockChildren) {
+      return false;
+    }
+
+    if (block.querySelector("img,video,audio,iframe,table")) {
+      return false;
+    }
+
+    const paragraph = document.createElement("p");
+    paragraph.innerHTML = block.innerHTML || "<br>";
+    block.replaceWith(paragraph);
+    moveCursorToEnd(paragraph);
+
+    return true;
+  };
 
   const getActiveBlock = () => {
     const editor = editorRef.current;
@@ -136,6 +216,13 @@ export function useAutoTransforms({
       }
 
       if (anchorElement === editor) {
+        const hasAnyChild = editor.childNodes.length > 0;
+
+        // Evita criar um <p><br></p> extra quando já existe conteúdo no editor.
+        if (hasAnyChild) {
+          return null;
+        }
+
         const paragraph = document.createElement("p");
         paragraph.innerHTML = "<br>";
         editor.appendChild(paragraph);
@@ -469,6 +556,8 @@ export function useAutoTransforms({
   };
 
   const handleInputTransform = (event: React.FormEvent<HTMLDivElement>) => {
+    normalizeParagraphDivOnActiveBlock();
+
     const hasMarkdownTransform = applyAutoMarkdownOnActiveBlock(event);
 
     if (hasMarkdownTransform) {
@@ -479,6 +568,11 @@ export function useAutoTransforms({
       applyTypographicConversionOnActiveBlock(event);
 
     if (hasTypographicTransform) {
+      return;
+    }
+
+    if (isFormattingInput(event)) {
+      persistHtml();
       return;
     }
 

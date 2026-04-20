@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "customRichEditorHtml";
+const DEFAULT_STORAGE_KEY = "customRichEditorHtml";
+
+type UseEditorSessionOptions = {
+  storageKey?: string | null;
+  initialHtml?: string;
+};
 
 const moveCaretToEnd = (element: HTMLElement) => {
   const selection = window.getSelection();
@@ -18,24 +23,38 @@ const moveCaretToEnd = (element: HTMLElement) => {
   selection.addRange(range);
 };
 
-export function useEditorSession() {
+export function useEditorSession(options: UseEditorSessionOptions = {}) {
+  const { storageKey = DEFAULT_STORAGE_KEY, initialHtml = "" } = options;
+
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
-  const lastSavedHtmlRef = useRef("");
-  const [html, setHtml] = useState("");
+  const lastSavedHtmlRef = useRef(initialHtml);
+  const [html, setHtml] = useState(initialHtml);
 
-  const saveHtmlToStorage = useCallback((nextHtml: string) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, nextHtml);
-      lastSavedHtmlRef.current = nextHtml;
-    } catch {
-      // Ignore storage errors (quota/private mode) to avoid breaking editor usage.
-    }
-  }, []);
+  const saveHtmlToStorage = useCallback(
+    (nextHtml: string) => {
+      if (!storageKey) {
+        lastSavedHtmlRef.current = nextHtml;
+        return;
+      }
+
+      try {
+        localStorage.setItem(storageKey, nextHtml);
+        lastSavedHtmlRef.current = nextHtml;
+      } catch {
+        // Ignore storage errors (quota/private mode) to avoid breaking editor usage.
+      }
+    },
+    [storageKey],
+  );
 
   useEffect(() => {
+    if (!storageKey) {
+      return;
+    }
+
     try {
-      const savedHtml = localStorage.getItem(STORAGE_KEY);
+      const savedHtml = localStorage.getItem(storageKey);
 
       if (savedHtml) {
         setHtml(savedHtml);
@@ -44,7 +63,7 @@ export function useEditorSession() {
     } catch {
       // Ignore read errors and keep editor usable.
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -114,6 +133,10 @@ export function useEditorSession() {
   );
 
   useEffect(() => {
+    if (!storageKey) {
+      return;
+    }
+
     const autosave = () => {
       const editor = editorRef.current;
 
@@ -142,7 +165,7 @@ export function useEditorSession() {
       window.removeEventListener("beforeunload", flushAutosave);
       document.removeEventListener("visibilitychange", flushAutosave);
     };
-  }, [saveHtmlToStorage]);
+  }, [saveHtmlToStorage, storageKey]);
 
   const getCommandContext = useCallback(() => {
     const editor = editorRef.current;

@@ -1,11 +1,15 @@
 {
   "name": "calcify",
   "version": "0.1.0",
+  "main": "desktop/main.cjs",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "dev:desktop": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:3000 && cross-env ELECTRON_START_URL=http://localhost:3000 electron .\"",
+    "start:desktop": "cross-env NODE_ENV=production electron .",
+    "build:desktop": "pnpm build && electron-builder",
     "lint": "biome check",
     "format": "biome format --write"
   },
@@ -29,14 +33,53 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
     "@tailwindcss/postcss": "^4",
+    "@types/dompurify": "^3.0.5",
+    "@types/marked": "^5.0.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/turndown": "^5.0.6",
-    "@types/dompurify": "^3.0.5",
-    "@types/marked": "^5.0.2",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.5"
+  },
+  "build": {
+    "appId": "com.calcify.app",
+    "productName": "Calcify",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "asar": true,
+    "files": [
+      "desktop/**/*",
+      "out/**/*",
+      "public/**/*",
+      "app/**/*",
+      "components/**/*",
+      "lib/**/*",
+      "utils/**/*",
+      "package.json",
+      "next.config.ts"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
   }
 }

@@ -268,6 +268,126 @@ export default function Editor() {
     }
   };
 
+  const findCodeBlockFromSelection = () => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    const getElementFromNode = (node: Node | null) => {
+      if (!node) {
+        return null;
+      }
+
+      return node.nodeType === Node.TEXT_NODE
+        ? node.parentElement
+        : (node as Element);
+    };
+
+    const candidates: Array<Node | null> = [
+      range.startContainer,
+      range.endContainer,
+      selection.anchorNode,
+      selection.focusNode,
+      range.commonAncestorContainer,
+    ];
+
+    for (const candidate of candidates) {
+      const element = getElementFromNode(candidate);
+      const pre = element?.closest("pre");
+
+      if (pre && editor.contains(pre)) {
+        return pre;
+      }
+    }
+
+    if (range.startContainer === editor) {
+      const leftSibling = editor.childNodes[range.startOffset - 1];
+      const rightSibling = editor.childNodes[range.startOffset];
+
+      if (leftSibling instanceof HTMLElement && leftSibling.tagName === "PRE") {
+        return leftSibling;
+      }
+
+      if (
+        rightSibling instanceof HTMLElement &&
+        rightSibling.tagName === "PRE"
+      ) {
+        return rightSibling;
+      }
+    }
+
+    return null;
+  };
+
+  const insertLineBreakInsideCodeBlock = () => {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const lineBreakNode = document.createTextNode("\n");
+
+    range.deleteContents();
+    range.insertNode(lineBreakNode);
+
+    const caretRange = document.createRange();
+    caretRange.setStartAfter(lineBreakNode);
+    caretRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(caretRange);
+
+    updateSavedRange();
+    persistHtml();
+    syncToolbarState();
+  };
+
+  const handleEditorBeforeInput = (event: React.FormEvent<HTMLDivElement>) => {
+    const nativeEvent = event.nativeEvent;
+
+    if (!(nativeEvent instanceof InputEvent)) {
+      return;
+    }
+
+    if (
+      nativeEvent.inputType !== "insertParagraph" &&
+      nativeEvent.inputType !== "insertLineBreak"
+    ) {
+      return;
+    }
+
+    const codeBlock = findCodeBlockFromSelection();
+
+    if (!codeBlock) {
+      return;
+    }
+
+    event.preventDefault();
+    insertLineBreakInsideCodeBlock();
+  };
+
+  const handleEditorKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    const codeBlock = findCodeBlockFromSelection();
+
+    if (!codeBlock) {
+      return;
+    }
+
+    // Mantem a quebra de linha dentro do mesmo <pre> e evita split em dois blocos.
+    event.preventDefault();
+    insertLineBreakInsideCodeBlock();
+  };
+
   const handleIncreaseZoom = () => {
     setZoom((prev) => Math.min(prev + 10, 200));
   };
@@ -354,7 +474,9 @@ export default function Editor() {
               handleInputTransform(event);
               syncToolbarState();
             }}
+            onBeforeInput={handleEditorBeforeInput}
             onPaste={handlePaste}
+            onKeyDown={handleEditorKeyDown}
             onMouseUp={() => {
               updateSavedRange();
               syncToolbarState();

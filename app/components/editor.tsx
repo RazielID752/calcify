@@ -32,6 +32,39 @@ type Document = {
 
 const DEFAULT_DOCUMENT_TITLE = "documento sem título";
 const MAX_AUTO_TITLE_LENGTH = 32;
+const FIRST_ACCESS_WELCOME_KEY = "calcify_first_access_welcome_seen_v1";
+
+const FIRST_ACCESS_WELCOME_MARKDOWN = `# Marcos Nathanael
+
+Eu sou o criado do calcify! Editor profissional que aceita markdown.
+
+## Stacks usadas
+
+- **Next.js**
+- **TypeScript**
+- **React**
+- **Electron + electron-builder**
+- **Tailwind CSS**
+- **Markdown**
+- **Math**
+
+> "O impossível e só questão de opinião!"
+>
+> Chorão - Charlie Brown
+
+[Github: RazielID752](https://github.com/RazielID752)
+
+- **Superscript e Subscript:** x<sup>2</sup> e H<sub>2</sub>O para maior precisão.
+- **Conversão tipográfica:** converter automaticamente \`->\` para uma seta \`→\`.
+- **Cálculo automático:** \`10 * 50 / 2 % 0 = 250\`
+- **Reconhecimento de símbolo de dinheiro:** \`50 * $10 = US$ 500,00\`
+- **Conversão de moeda em tempo real:** \`$10 * R$1 = R$ 10,00\`
+
+\`\`\`js
+JavaCript is life
+Const Love = [199]
+\`\`\`
+`;
 
 const trimAndCollapseWhitespace = (value: string) =>
   value.replace(/\s+/g, " ").trim();
@@ -313,6 +346,48 @@ export default function Editor() {
     setActiveDocumentId(newDocument.id);
     setIsCreateDialogOpen(false);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const hasSeenWelcome =
+        localStorage.getItem(FIRST_ACCESS_WELCOME_KEY) === "1";
+
+      if (hasSeenWelcome) {
+        return;
+      }
+
+      if (documents.length !== 1) {
+        return;
+      }
+
+      const firstDocument = documents[0];
+      const hasExistingContent =
+        trimAndCollapseWhitespace(firstDocument.content).length > 0;
+
+      localStorage.setItem(FIRST_ACCESS_WELCOME_KEY, "1");
+
+      if (hasExistingContent) {
+        return;
+      }
+
+      const welcomeHtml = renderMarkdownToHtml(FIRST_ACCESS_WELCOME_MARKDOWN);
+
+      const welcomeDocument: Document = {
+        ...createBlankDocument("Marcos Nathanael"),
+        content: welcomeHtml,
+        titleMode: "manual",
+      };
+
+      setDocuments([welcomeDocument]);
+      setActiveDocumentId(welcomeDocument.id);
+    } catch {
+      // Ignore storage errors and keep editor usage functional.
+    }
+  }, [documents]);
 
   const handleRenameDocument = useCallback(
     (documentId: string, nextTitle: string) => {

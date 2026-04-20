@@ -354,6 +354,39 @@ export default function Editor() {
     setIsCreateDialogOpen(false);
   }, []);
 
+  const handleCloseDocument = useCallback(
+    (documentId: string) => {
+      let nextActiveDocumentId: string | null = null;
+
+      setDocuments((previousDocuments) => {
+        const targetDocumentIndex = previousDocuments.findIndex(
+          (documentItem) => documentItem.id === documentId,
+        );
+
+        if (targetDocumentIndex === -1) {
+          return previousDocuments;
+        }
+
+        const nextDocuments = previousDocuments.filter(
+          (documentItem) => documentItem.id !== documentId,
+        );
+
+        if (activeDocumentId === documentId) {
+          const fallbackIndex =
+            targetDocumentIndex > 0 ? targetDocumentIndex - 1 : 0;
+          nextActiveDocumentId = nextDocuments[fallbackIndex]?.id ?? null;
+        }
+
+        return nextDocuments;
+      });
+
+      if (nextActiveDocumentId) {
+        setActiveDocumentId(nextActiveDocumentId);
+      }
+    },
+    [activeDocumentId],
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -512,6 +545,7 @@ export default function Editor() {
         onOpenCreateDialog={handleOpenCreateDocumentDialog}
         onCreateDocument={handleCreateDocument}
         onRenameDocument={handleRenameDocument}
+        onCloseDocument={handleCloseDocument}
         onCreateDialogOpenChange={setIsCreateDialogOpen}
       />
 

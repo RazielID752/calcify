@@ -46,8 +46,8 @@ export default function RenameDocumentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Renomear documento</DialogTitle>
-          <DialogDescription>
+          <DialogTitle> Renomear documento</DialogTitle>
+          <DialogDescription className="pb-2">
             Escolha um novo nome para a aba selecionada.
           </DialogDescription>
         </DialogHeader>

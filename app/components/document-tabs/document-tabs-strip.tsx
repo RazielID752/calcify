@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilLine, Plus } from "lucide-react";
+import { PencilLine, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -15,6 +15,7 @@ type DocumentTabsStripProps = {
   onActiveDocumentChange: (id: string) => void;
   onOpenCreateDialog: () => void;
   onRequestRenameDocument: (documentItem: DocumentTabItem) => void;
+  onRequestCloseDocument: (documentItem: DocumentTabItem) => void;
 };
 
 export default function DocumentTabsStrip({
@@ -23,6 +24,7 @@ export default function DocumentTabsStrip({
   onActiveDocumentChange,
   onOpenCreateDialog,
   onRequestRenameDocument,
+  onRequestCloseDocument,
 }: DocumentTabsStripProps) {
   return (
     <div className="sticky top-0 z-30 -mx-3 mb-3 border-b border-zinc-200/80 bg-white/90 px-3 py-2 backdrop-blur sm:-mx-6 sm:px-6">
@@ -60,6 +62,24 @@ export default function DocumentTabsStrip({
                       }}
                     >
                       <PencilLine className="size-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      title="Fechar documento"
+                      className="size-4.5 shrink-0 text-zinc-400 hover:text-red-600 sm:size-5"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onRequestCloseDocument(documentItem);
+                      }}
+                    >
+                      <X className="size-3.5" />
                     </Button>
                   </div>
                 </TabsTrigger>

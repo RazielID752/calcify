@@ -106,7 +106,7 @@ export default function EditorToolbar({
   onMathChange,
 }: EditorToolbarProps) {
   const activeButtonClass =
-    "border-zinc-900/15 bg-zinc-900/10 text-zinc-900 hover:bg-zinc-900/15";
+    "border-zinc-900/10 bg-zinc-900/5 text-emerald-600 hover:bg-zinc-900/10 hover:text-emerald-700";
 
   return (
     <div className="sticky top-3 z-20 overflow-x-auto rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur">

@@ -1,9 +1,5 @@
 export const EDITOR_CONTENT_CLASSNAME = [
   "mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc",
-  "empty:before:content-[attr(data-placeholder)]",
-  "empty:before:pointer-events-none",
-  "empty:before:select-none",
-  "empty:before:text-zinc-400",
   "[&_blockquote]:border-l-4",
   "[&_blockquote]:border-emerald-300",
   "[&_blockquote]:pl-4",
@@ -33,6 +29,7 @@ export const EDITOR_CONTENT_CLASSNAME = [
   "[&_h1]:mt-6",
   "[&_h1]:text-4xl",
   "[&_h1]:font-bold",
+  "[&_h1:first-child]:mt-0",
   "[&_h2]:mt-5",
   "[&_h2]:text-3xl",
   "[&_h2]:font-semibold",

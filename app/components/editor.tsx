@@ -1,5 +1,6 @@
 "use client";
 
+import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { renderMarkdownToHtml } from "@/utils/render-markdown";
 import DocumentTabsBar from "./document-tabs-bar";
@@ -11,10 +12,18 @@ import {
   mathOptions,
 } from "./editor-commands";
 import { EDITOR_CONTENT_CLASSNAME } from "./editor-content-classname";
+import {
+  BODY_PLACEHOLDER,
+  DEFAULT_DOCUMENT_TITLE,
+  hasMeaningfulEditorContent,
+  TITLE_PLACEHOLDER,
+} from "./editor-document";
 import EditorToolbar from "./editor-toolbar";
 import { useAutoTransforms } from "./hooks/use-auto-transforms";
+import { useBlockDragAndDrop } from "./hooks/use-block-drag-and-drop";
 import { useEditorContentHandlers } from "./hooks/use-editor-content-handlers";
 import { useEditorDialogs } from "./hooks/use-editor-dialogs";
+import { useEditorDocuments } from "./hooks/use-editor-documents";
 import { useEditorSession } from "./hooks/use-editor-session";
 import { useEditorToolbarState } from "./hooks/use-editor-toolbar-state";
 import { useMarkdownRenderer } from "./hooks/use-markdown-renderer";
@@ -22,118 +31,21 @@ import ImageDialog from "./image-dialog";
 import LinkDialog from "./link-dialog";
 import ZoomControls from "./zoom-controls";
 
-type Document = {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: Date;
-  titleMode: "auto" | "manual";
-};
-
-const DEFAULT_DOCUMENT_TITLE = "documento sem título";
-const MAX_AUTO_TITLE_LENGTH = 32;
-const FIRST_ACCESS_WELCOME_KEY = "calcify_first_access_welcome_seen_v1";
-const INITIAL_DOCUMENT_ID = "initial-document";
-
-const FIRST_ACCESS_WELCOME_MARKDOWN = `# Marcos Nathanael
-
-Eu sou o criado do calcify! Editor profissional que aceita markdown.
-
-## Stacks usadas
-
-- **Next.js**
-- **TypeScript**
-- **React**
-- **Electron + electron-builder**
-- **Tailwind CSS**
-- **Markdown**
-- **Math**
-
-> "O impossível e só questão de opinião!"
->
-> Chorão - Charlie Brown
-
-[Github: RazielID752](https://github.com/RazielID752)
-
-- **Superscript e Subscript:** x<sup>2</sup> e H<sub>2</sub>O para maior precisão.
-- **Conversão tipográfica:** converter automaticamente \`->\` para uma seta \`→\`.
-- **Cálculo automático:** \`10 * 50 / 2 % 0 = 250\`
-- **Reconhecimento de símbolo de dinheiro:** \`50 * $10 = US$ 500,00\`
-- **Conversão de moeda em tempo real:** \`$10 * R$1 = R$ 10,00\`
-
-\`\`\`js
-JavaCript is life
-Const Love = [199]
-\`\`\`
-`;
-
-const trimAndCollapseWhitespace = (value: string) =>
-  value.replace(/\s+/g, " ").trim();
-
-const shortenTitle = (value: string) => {
-  const normalized = trimAndCollapseWhitespace(value);
-
-  if (normalized.length <= MAX_AUTO_TITLE_LENGTH) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, MAX_AUTO_TITLE_LENGTH).trimEnd()}...`;
-};
-
-const getAutoTitleFromContent = (content: string) => {
-  if (!content || typeof document === "undefined") {
-    return DEFAULT_DOCUMENT_TITLE;
-  }
-
-  const container = document.createElement("div");
-  container.innerHTML = content;
-
-  const firstHeading = container.querySelector("h1");
-  const headingText = trimAndCollapseWhitespace(
-    firstHeading?.textContent ?? "",
-  );
-
-  if (!headingText) {
-    return DEFAULT_DOCUMENT_TITLE;
-  }
-
-  return shortenTitle(headingText);
-};
-
-const createDocumentId = () =>
-  globalThis.crypto?.randomUUID?.() ??
-  `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-const createBlankDocument = (
-  initialTitle = "",
-  options?: { fixedId?: string },
-): Document => {
-  const normalizedTitle = trimAndCollapseWhitespace(initialTitle);
-  const fixedId = options?.fixedId;
-
-  return {
-    id: fixedId ?? createDocumentId(),
-    title: normalizedTitle || DEFAULT_DOCUMENT_TITLE,
-    content: "",
-    createdAt: fixedId ? new Date(0) : new Date(),
-    titleMode: normalizedTitle ? "manual" : "auto",
-  };
-};
-
 export default function Editor() {
-  const initialDocumentRef = useRef<Document>(
-    createBlankDocument("", { fixedId: INITIAL_DOCUMENT_ID }),
-  );
-  const [documents, setDocuments] = useState<Document[]>(() => [
-    initialDocumentRef.current,
-  ]);
-  const [activeDocumentId, setActiveDocumentId] = useState<string>(
-    initialDocumentRef.current.id,
-  );
-  const previousActiveDocumentIdRef = useRef<string>(
-    initialDocumentRef.current.id,
-  );
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const {
+    documents,
+    setDocuments,
+    activeDocumentId,
+    setActiveDocumentId,
+    isCreateDialogOpen,
+    setIsCreateDialogOpen,
+    handleOpenCreateDocumentDialog,
+    handleCreateDocument,
+    handleCloseDocument,
+    handleRenameDocument,
+    updateActiveDocumentContent,
+  } = useEditorDocuments();
+  const previousActiveDocumentIdRef = useRef<string>(activeDocumentId);
 
   const {
     editorRef,
@@ -145,43 +57,79 @@ export default function Editor() {
     savedRangeRef,
   } = useEditorSession({
     storageKey: null,
-    initialHtml: initialDocumentRef.current.content,
+    initialHtml: "",
   });
 
   const [zoom, setZoom] = useState(100);
+  const [isEditorEmpty, setIsEditorEmpty] = useState(true);
 
-  const updateActiveDocumentContent = useCallback(
-    (nextContent?: string) => {
-      const content = nextContent ?? editorRef.current?.innerHTML ?? "";
+  const ensureTitleBlockWhenEditorIsEmpty = useCallback(
+    (options?: { moveCaretToTitle?: boolean }) => {
+      const editor = editorRef.current;
 
-      setDocuments((previousDocuments) =>
-        previousDocuments.map((documentItem) => {
-          if (documentItem.id !== activeDocumentId) {
-            return documentItem;
-          }
+      if (!editor) {
+        return;
+      }
 
-          if (documentItem.content === content) {
-            return documentItem;
-          }
+      const html = editor.innerHTML;
+      const isEmpty = !hasMeaningfulEditorContent(html);
 
-          return {
-            ...documentItem,
-            content,
-            title:
-              documentItem.titleMode === "manual"
-                ? documentItem.title
-                : getAutoTitleFromContent(content),
-          };
-        }),
-      );
+      if (!isEmpty) {
+        setIsEditorEmpty(false);
+        return;
+      }
+
+      const firstElement = editor.firstElementChild;
+      const firstElementIsTitle =
+        firstElement instanceof HTMLHeadingElement &&
+        firstElement.tagName === "H1" &&
+        editor.children.length === 1;
+
+      if (!firstElementIsTitle) {
+        editor.innerHTML = "<h1><br></h1>";
+      }
+
+      const titleElement = editor.querySelector("h1");
+
+      if (options?.moveCaretToTitle && titleElement instanceof HTMLElement) {
+        moveCursorToEnd(titleElement);
+      }
+
+      setIsEditorEmpty(true);
     },
-    [activeDocumentId, editorRef],
+    [editorRef, moveCursorToEnd],
+  );
+
+  const syncEditorEmptyState = useCallback(() => {
+    const html = editorRef.current?.innerHTML ?? "";
+    setIsEditorEmpty(!hasMeaningfulEditorContent(html));
+  }, [editorRef]);
+
+  const {
+    dragHandleTop,
+    dragIndicatorTop,
+    isDraggingBlock,
+    clearHoveredDragBlock,
+    finishBlockDrag,
+    handleStartBlockDrag,
+  } = useBlockDragAndDrop({
+    editorRef,
+    activeDocumentId,
+    persistHtml,
+    setDocuments,
+    updateSavedRange,
+    syncEditorEmptyState,
+  });
+
+  const getCurrentEditorHtml = useCallback(
+    () => editorRef.current?.innerHTML ?? "",
+    [editorRef],
   );
 
   const persistCurrentDocumentHtml = useCallback(() => {
     persistHtml();
-    updateActiveDocumentContent();
-  }, [persistHtml, updateActiveDocumentContent]);
+    updateActiveDocumentContent(getCurrentEditorHtml());
+  }, [getCurrentEditorHtml, persistHtml, updateActiveDocumentContent]);
 
   const applyHtmlToActiveDocument = useCallback(
     (nextHtml: string) => {
@@ -339,137 +287,8 @@ export default function Editor() {
       persistCurrentDocumentHtml();
       setActiveDocumentId(nextDocumentId);
     },
-    [activeDocumentId, persistCurrentDocumentHtml],
+    [activeDocumentId, persistCurrentDocumentHtml, setActiveDocumentId],
   );
-
-  const handleOpenCreateDocumentDialog = () => {
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleCreateDocument = useCallback((initialTitle: string) => {
-    const newDocument = createBlankDocument(initialTitle);
-
-    setDocuments((previousDocuments) => [...previousDocuments, newDocument]);
-    setActiveDocumentId(newDocument.id);
-    setIsCreateDialogOpen(false);
-  }, []);
-
-  const handleCloseDocument = useCallback(
-    (documentId: string) => {
-      let nextActiveDocumentId: string | null = null;
-
-      setDocuments((previousDocuments) => {
-        const targetDocumentIndex = previousDocuments.findIndex(
-          (documentItem) => documentItem.id === documentId,
-        );
-
-        if (targetDocumentIndex === -1) {
-          return previousDocuments;
-        }
-
-        const nextDocuments = previousDocuments.filter(
-          (documentItem) => documentItem.id !== documentId,
-        );
-
-        if (activeDocumentId === documentId) {
-          const fallbackIndex =
-            targetDocumentIndex > 0 ? targetDocumentIndex - 1 : 0;
-          nextActiveDocumentId = nextDocuments[fallbackIndex]?.id ?? null;
-        }
-
-        return nextDocuments;
-      });
-
-      if (nextActiveDocumentId) {
-        setActiveDocumentId(nextActiveDocumentId);
-      }
-    },
-    [activeDocumentId],
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    try {
-      const hasSeenWelcome =
-        localStorage.getItem(FIRST_ACCESS_WELCOME_KEY) === "1";
-
-      if (hasSeenWelcome) {
-        return;
-      }
-
-      if (documents.length !== 1) {
-        return;
-      }
-
-      const firstDocument = documents[0];
-      const hasExistingContent =
-        trimAndCollapseWhitespace(firstDocument.content).length > 0;
-
-      localStorage.setItem(FIRST_ACCESS_WELCOME_KEY, "1");
-
-      if (hasExistingContent) {
-        return;
-      }
-
-      const welcomeHtml = renderMarkdownToHtml(FIRST_ACCESS_WELCOME_MARKDOWN);
-
-      const welcomeDocument: Document = {
-        ...createBlankDocument("Marcos Nathanael"),
-        content: welcomeHtml,
-        titleMode: "manual",
-      };
-
-      setDocuments([welcomeDocument]);
-      setActiveDocumentId(welcomeDocument.id);
-    } catch {
-      // Ignore storage errors and keep editor usage functional.
-    }
-  }, [documents]);
-
-  const handleRenameDocument = useCallback(
-    (documentId: string, nextTitle: string) => {
-      const normalizedTitle = nextTitle.trim() || DEFAULT_DOCUMENT_TITLE;
-
-      setDocuments((previousDocuments) =>
-        previousDocuments.map((documentItem) => {
-          if (documentItem.id !== documentId) {
-            return documentItem;
-          }
-
-          if (documentItem.title === normalizedTitle) {
-            return documentItem;
-          }
-
-          return {
-            ...documentItem,
-            title: normalizedTitle,
-            titleMode: "manual",
-          };
-        }),
-      );
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (documents.length === 0) {
-      const fallbackDocument = createBlankDocument();
-      setDocuments([fallbackDocument]);
-      setActiveDocumentId(fallbackDocument.id);
-      return;
-    }
-
-    const activeDocumentExists = documents.some(
-      (documentItem) => documentItem.id === activeDocumentId,
-    );
-
-    if (!activeDocumentExists) {
-      setActiveDocumentId(documents[0].id);
-    }
-  }, [activeDocumentId, documents]);
 
   useEffect(() => {
     if (previousActiveDocumentIdRef.current === activeDocumentId) {
@@ -483,12 +302,20 @@ export default function Editor() {
     );
 
     applyExternalHtml(nextActiveDocument?.content ?? "");
+    finishBlockDrag();
+    clearHoveredDragBlock();
+    ensureTitleBlockWhenEditorIsEmpty();
     updateSavedRange();
+    syncEditorEmptyState();
     syncToolbarState();
   }, [
     activeDocumentId,
     applyExternalHtml,
+    clearHoveredDragBlock,
     documents,
+    ensureTitleBlockWhenEditorIsEmpty,
+    finishBlockDrag,
+    syncEditorEmptyState,
     syncToolbarState,
     updateSavedRange,
   ]);
@@ -505,15 +332,24 @@ export default function Editor() {
         return;
       }
 
+      ensureTitleBlockWhenEditorIsEmpty({ moveCaretToTitle: true });
       editor.focus();
       updateSavedRange();
+      syncEditorEmptyState();
       syncToolbarState();
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [editorRef, isCreateDialogOpen, syncToolbarState, updateSavedRange]);
+  }, [
+    editorRef,
+    ensureTitleBlockWhenEditorIsEmpty,
+    isCreateDialogOpen,
+    syncEditorEmptyState,
+    syncToolbarState,
+    updateSavedRange,
+  ]);
 
   const handleIncreaseZoom = () => {
     setZoom((prev) => Math.min(prev + 10, 200));
@@ -596,37 +432,80 @@ export default function Editor() {
         />
 
         <div className="p-3 sm:p-3">
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: um editor rich text obrigatoriamente precisa usar uma div com contentEditable. */}
-          <div
-            ref={editorRef}
-            className={EDITOR_CONTENT_CLASSNAME}
-            data-placeholder="Digite algum texto..."
-            contentEditable
-            suppressContentEditableWarning
-            onInput={(event) => {
-              handleInputTransform(event);
-              syncToolbarState();
-            }}
-            onBeforeInput={handleEditorBeforeInput}
-            onPaste={handlePaste}
-            onKeyDown={handleEditorKeyDown}
-            onMouseUp={() => {
-              updateSavedRange();
-              syncToolbarState();
-            }}
-            onKeyUp={() => {
-              updateSavedRange();
-              syncToolbarState();
-            }}
-            onFocus={() => {
-              updateSavedRange();
-              syncToolbarState();
-            }}
-            onBlur={() => {
-              persistCurrentDocumentHtml();
-              syncToolbarState();
-            }}
-          />
+          <div className="relative">
+            {isEditorEmpty ? (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 z-10 select-none"
+              >
+                <p className="text-4xl font-bold text-zinc-300">
+                  {TITLE_PLACEHOLDER}
+                </p>
+                <p className="mt-5 text-base text-zinc-400">
+                  {BODY_PLACEHOLDER}
+                </p>
+              </div>
+            ) : null}
+
+            {dragHandleTop !== null && !isDraggingBlock ? (
+              <button
+                type="button"
+                aria-label="Arrastar bloco"
+                title="Arrastar bloco"
+                onMouseDown={handleStartBlockDrag}
+                className="absolute -left-8 top-0 z-20 hidden size-6 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-800 sm:flex"
+                style={{ top: `${dragHandleTop}px` }}
+              >
+                <GripVertical className="size-4" />
+              </button>
+            ) : null}
+
+            {isDraggingBlock && dragIndicatorTop !== null ? (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 z-20 h-0.5 rounded-full bg-emerald-500/90"
+                style={{ top: `${dragIndicatorTop}px` }}
+              />
+            ) : null}
+
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: um editor rich text obrigatoriamente precisa usar uma div com contentEditable. */}
+            <div
+              ref={editorRef}
+              className={EDITOR_CONTENT_CLASSNAME}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(event) => {
+                handleInputTransform(event);
+                ensureTitleBlockWhenEditorIsEmpty();
+                syncEditorEmptyState();
+                syncToolbarState();
+              }}
+              onBeforeInput={handleEditorBeforeInput}
+              onPaste={handlePaste}
+              onKeyDown={handleEditorKeyDown}
+              onMouseUp={() => {
+                updateSavedRange();
+                syncEditorEmptyState();
+                syncToolbarState();
+              }}
+              onKeyUp={() => {
+                updateSavedRange();
+                syncEditorEmptyState();
+                syncToolbarState();
+              }}
+              onFocus={() => {
+                ensureTitleBlockWhenEditorIsEmpty({ moveCaretToTitle: true });
+                updateSavedRange();
+                syncEditorEmptyState();
+                syncToolbarState();
+              }}
+              onBlur={() => {
+                persistCurrentDocumentHtml();
+                syncEditorEmptyState();
+                syncToolbarState();
+              }}
+            />
+          </div>
 
           <LinkDialog
             open={isLinkDialogOpen}

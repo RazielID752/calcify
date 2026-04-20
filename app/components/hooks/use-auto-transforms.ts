@@ -209,25 +209,25 @@ export function useAutoTransforms({
         anchorNode.nodeType === Node.TEXT_NODE &&
         anchorNode.parentNode === editor
       ) {
-        const paragraph = document.createElement("p");
-        editor.insertBefore(paragraph, anchorNode);
-        paragraph.appendChild(anchorNode);
-        return paragraph;
+        const heading = document.createElement("h1");
+        editor.insertBefore(heading, anchorNode);
+        heading.appendChild(anchorNode);
+        return heading;
       }
 
       if (anchorElement === editor) {
         const hasAnyChild = editor.childNodes.length > 0;
 
-        // Evita criar um <p><br></p> extra quando já existe conteúdo no editor.
+        // Evita criar um bloco extra quando já existe conteúdo no editor.
         if (hasAnyChild) {
           return null;
         }
 
-        const paragraph = document.createElement("p");
-        paragraph.innerHTML = "<br>";
-        editor.appendChild(paragraph);
-        moveCursorToEnd(paragraph);
-        return paragraph;
+        const heading = document.createElement("h1");
+        heading.innerHTML = "<br>";
+        editor.appendChild(heading);
+        moveCursorToEnd(heading);
+        return heading;
       }
 
       return null;

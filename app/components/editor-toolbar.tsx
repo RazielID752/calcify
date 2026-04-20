@@ -136,7 +136,7 @@ export default function EditorToolbar({
 
   return (
     <TooltipProvider>
-      <div className="sticky top-[3.75rem] z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur sm:top-[4.25rem]">
+      <div className="sticky top-15 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur sm:top-[4.25rem]">
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max snap-x snap-mandatory items-center justify-start gap-2 md:justify-between sm:gap-3">
             <div className="shrink-0">
@@ -172,7 +172,7 @@ export default function EditorToolbar({
                 }
               >
                 <SelectTrigger className="h-9 w-24 sm:h-8 sm:w-28">
-                  <SelectValue placeholder="Heading" />
+                  <SelectValue placeholder="Título" />
                 </SelectTrigger>
                 <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
                   <SelectItem value="h1">H1</SelectItem>

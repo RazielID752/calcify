@@ -49,7 +49,7 @@ export function useEditorSession(options: UseEditorSessionOptions = {}) {
   );
 
   useEffect(() => {
-    if (!storageKey) {
+    if (!storageKey || process.env.NODE_ENV !== "production") {
       return;
     }
 
@@ -151,7 +151,7 @@ export function useEditorSession(options: UseEditorSessionOptions = {}) {
       }
     };
 
-    const intervalId = window.setInterval(autosave, 1500);
+    const intervalId = window.setInterval(autosave, 5000);
 
     const flushAutosave = () => {
       autosave();

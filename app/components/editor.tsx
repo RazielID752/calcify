@@ -154,7 +154,6 @@ export default function Editor() {
 
   const { toolbarState, syncToolbarState } = useEditorToolbarState({
     editorRef,
-    updateSavedRange,
   });
 
   const run = useCallback(

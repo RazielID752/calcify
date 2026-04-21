@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useCallback, useEffect, useState } from "react";
+import { type RefObject, useCallback, useRef, useState } from "react";
 import type { AlignType } from "../editor-commands";
 
 export type EditorToolbarState = {
@@ -21,7 +21,6 @@ export type EditorToolbarState = {
 
 type UseEditorToolbarStateParams = {
   editorRef: RefObject<HTMLDivElement | null>;
-  updateSavedRange: () => void;
 };
 
 const INITIAL_TOOLBAR_STATE: EditorToolbarState = {
@@ -42,9 +41,37 @@ const INITIAL_TOOLBAR_STATE: EditorToolbarState = {
 
 export function useEditorToolbarState({
   editorRef,
-  updateSavedRange,
 }: UseEditorToolbarStateParams) {
   const [toolbarState, setToolbarState] = useState(INITIAL_TOOLBAR_STATE);
+  const toolbarStateRef = useRef(INITIAL_TOOLBAR_STATE);
+
+  const setToolbarStateIfChanged = useCallback(
+    (nextState: EditorToolbarState) => {
+      const previousState = toolbarStateRef.current;
+
+      if (
+        previousState.bold === nextState.bold &&
+        previousState.italic === nextState.italic &&
+        previousState.strike === nextState.strike &&
+        previousState.underline === nextState.underline &&
+        previousState.highlight === nextState.highlight &&
+        previousState.subscript === nextState.subscript &&
+        previousState.superscript === nextState.superscript &&
+        previousState.inlineCode === nextState.inlineCode &&
+        previousState.bulletList === nextState.bulletList &&
+        previousState.orderedList === nextState.orderedList &&
+        previousState.blockquote === nextState.blockquote &&
+        previousState.codeBlock === nextState.codeBlock &&
+        previousState.align === nextState.align
+      ) {
+        return;
+      }
+
+      toolbarStateRef.current = nextState;
+      setToolbarState(nextState);
+    },
+    [],
+  );
 
   const syncToolbarState = useCallback(() => {
     const editor = editorRef.current;
@@ -102,7 +129,7 @@ export function useEditorToolbarState({
 
     const isHighlighted = hasHighlightCommandValue || hasHighlightAncestor;
 
-    setToolbarState({
+    setToolbarStateIfChanged({
       bold: document.queryCommandState("bold"),
       italic: document.queryCommandState("italic"),
       strike: document.queryCommandState("strikeThrough"),
@@ -117,20 +144,7 @@ export function useEditorToolbarState({
       codeBlock: block?.tagName === "PRE",
       align,
     });
-  }, [editorRef]);
-
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      updateSavedRange();
-      syncToolbarState();
-    };
-
-    document.addEventListener("selectionchange", handleSelectionChange);
-
-    return () => {
-      document.removeEventListener("selectionchange", handleSelectionChange);
-    };
-  }, [syncToolbarState, updateSavedRange]);
+  }, [editorRef, setToolbarStateIfChanged]);
 
   return {
     toolbarState,

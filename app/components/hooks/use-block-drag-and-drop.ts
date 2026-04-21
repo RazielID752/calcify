@@ -41,6 +41,9 @@ export const useBlockDragAndDrop = ({
     null,
   );
   const dragEndListenerRef = useRef<((event: MouseEvent) => void) | null>(null);
+  const dragKeydownListenerRef = useRef<
+    ((event: KeyboardEvent) => void) | null
+  >(null);
 
   const clearHoveredDragBlock = useCallback(() => {
     hoveredDragBlockRef.current = null;
@@ -56,6 +59,11 @@ export const useBlockDragAndDrop = ({
     if (dragEndListenerRef.current) {
       window.removeEventListener("mouseup", dragEndListenerRef.current);
       dragEndListenerRef.current = null;
+    }
+
+    if (dragKeydownListenerRef.current) {
+      window.removeEventListener("keydown", dragKeydownListenerRef.current);
+      dragKeydownListenerRef.current = null;
     }
   }, []);
 
@@ -329,6 +337,20 @@ export const useBlockDragAndDrop = ({
     [editorRef, getReorderCandidates],
   );
 
+  const cancelBlockDrag = useCallback(() => {
+    const source = dragSourceBlockRef.current;
+
+    if (source) {
+      source.style.removeProperty("opacity");
+    }
+
+    dragSourceBlockRef.current = null;
+    dragInsertionBeforeRef.current = null;
+    setDragIndicatorTop(null);
+    setIsDraggingBlock(false);
+    removeDragListeners();
+  }, [removeDragListeners]);
+
   const finishBlockDrag = useCallback(() => {
     const editor = editorRef.current;
     const source = dragSourceBlockRef.current;
@@ -417,7 +439,6 @@ export const useBlockDragAndDrop = ({
         return;
       }
 
-      clearHoveredDragBlock();
       setIsDraggingBlock(true);
       dragSourceBlockRef.current = source;
       source.style.opacity = "0.55";
@@ -433,14 +454,23 @@ export const useBlockDragAndDrop = ({
         finishBlockDrag();
       };
 
+      const handleKeyDown = (keyEvent: KeyboardEvent) => {
+        if (keyEvent.key === "Escape") {
+          keyEvent.preventDefault();
+          cancelBlockDrag();
+        }
+      };
+
       removeDragListeners();
       dragMoveListenerRef.current = handleMouseMove;
       dragEndListenerRef.current = handleMouseUp;
+      dragKeydownListenerRef.current = handleKeyDown;
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("keydown", handleKeyDown);
     },
     [
-      clearHoveredDragBlock,
+      cancelBlockDrag,
       editorRef,
       finishBlockDrag,
       isDraggableListItem,

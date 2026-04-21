@@ -447,13 +447,13 @@ export default function Editor() {
               </div>
             ) : null}
 
-            {dragHandleTop !== null && !isDraggingBlock ? (
+            {dragHandleTop !== null ? (
               <button
                 type="button"
                 aria-label="Arrastar bloco"
                 title="Arrastar bloco"
                 onMouseDown={handleStartBlockDrag}
-                className="absolute -left-8 top-0 z-20 hidden size-6 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-800 sm:flex"
+                className={`absolute -left-8 top-0 z-20 hidden size-6 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-emerald-200 hover:text-emerald-800 sm:flex ${isDraggingBlock ? "cursor-grabbing" : "cursor-grab"}`}
                 style={{ top: `${dragHandleTop}px` }}
               >
                 <GripVertical className="size-4" />

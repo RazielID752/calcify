@@ -420,7 +420,40 @@ export const editorCommands = {
     runExecCommand(context, "formatBlock", "pre");
   },
   bold(context: EditorContext) {
-    runExecCommand(context, "bold");
+    restoreSelection(context);
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const anchorElement =
+      selection.anchorNode?.nodeType === Node.TEXT_NODE
+        ? selection.anchorNode.parentElement
+        : (selection.anchorNode as Element | null);
+
+    const boldAncestor = anchorElement?.closest("strong,b");
+    const isBoldActive =
+      boldAncestor instanceof HTMLElement &&
+      context.editor.contains(boldAncestor);
+
+    if (isBoldActive) {
+      unwrapElement(boldAncestor);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const selectedContent = range.extractContents();
+
+    const strongElement = document.createElement("strong");
+    strongElement.appendChild(selectedContent);
+    range.insertNode(strongElement);
+
+    selection.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(strongElement);
+    selection.addRange(newRange);
   },
   italic(context: EditorContext) {
     runExecCommand(context, "italic");

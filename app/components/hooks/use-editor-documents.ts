@@ -11,6 +11,68 @@ import {
   INITIAL_DOCUMENT_ID,
 } from "../editor-document";
 
+const DOCUMENTS_STORAGE_KEY = "calcify_documents_v1";
+const ACTIVE_DOCUMENT_ID_STORAGE_KEY = "calcify_active_document_id_v1";
+
+type StoredDocument = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  titleMode: "auto" | "manual";
+};
+
+const isTitleMode = (value: unknown): value is "auto" | "manual" =>
+  value === "auto" || value === "manual";
+
+const toDocument = (storedDocument: StoredDocument): Document => {
+  const createdAtDate = new Date(storedDocument.createdAt);
+
+  return {
+    id: storedDocument.id,
+    title: storedDocument.title,
+    content: storedDocument.content,
+    createdAt: Number.isNaN(createdAtDate.getTime())
+      ? new Date()
+      : createdAtDate,
+    titleMode: storedDocument.titleMode,
+  };
+};
+
+const parseStoredDocuments = (rawValue: string | null): Document[] => {
+  if (!rawValue) {
+    return [];
+  }
+
+  try {
+    const parsedValue = JSON.parse(rawValue);
+
+    if (!Array.isArray(parsedValue)) {
+      return [];
+    }
+
+    return parsedValue
+      .filter((item): item is StoredDocument => {
+        if (!item || typeof item !== "object") {
+          return false;
+        }
+
+        const candidate = item as Partial<StoredDocument>;
+
+        return (
+          typeof candidate.id === "string" &&
+          typeof candidate.title === "string" &&
+          typeof candidate.content === "string" &&
+          typeof candidate.createdAt === "string" &&
+          isTitleMode(candidate.titleMode)
+        );
+      })
+      .map(toDocument);
+  } catch {
+    return [];
+  }
+};
+
 export const useEditorDocuments = () => {
   const initialDocumentRef = useRef<Document>(
     createBlankDocument("", { fixedId: INITIAL_DOCUMENT_ID }),
@@ -22,6 +84,64 @@ export const useEditorDocuments = () => {
     initialDocumentRef.current.id,
   );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isStorageHydrated, setIsStorageHydrated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const storedDocuments = parseStoredDocuments(
+        localStorage.getItem(DOCUMENTS_STORAGE_KEY),
+      );
+
+      if (storedDocuments.length === 0) {
+        return;
+      }
+
+      setDocuments(storedDocuments);
+
+      const storedActiveDocumentId = localStorage.getItem(
+        ACTIVE_DOCUMENT_ID_STORAGE_KEY,
+      );
+
+      const hasStoredActiveDocument = storedDocuments.some(
+        (documentItem) => documentItem.id === storedActiveDocumentId,
+      );
+
+      setActiveDocumentId(
+        hasStoredActiveDocument
+          ? (storedActiveDocumentId as string)
+          : storedDocuments[0].id,
+      );
+    } catch {
+      // Ignora erros de leitura do localStorage para evitar quebrar o uso do editor.
+    } finally {
+      setIsStorageHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isStorageHydrated || typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const serializedDocuments = documents.map((documentItem) => ({
+        ...documentItem,
+        createdAt: documentItem.createdAt.toISOString(),
+      }));
+
+      localStorage.setItem(
+        DOCUMENTS_STORAGE_KEY,
+        JSON.stringify(serializedDocuments),
+      );
+      localStorage.setItem(ACTIVE_DOCUMENT_ID_STORAGE_KEY, activeDocumentId);
+    } catch {
+      // Ignore storage errors to avoid breaking editor usage.
+    }
+  }, [activeDocumentId, documents, isStorageHydrated]);
 
   const updateActiveDocumentContent = useCallback(
     (content: string) => {
@@ -120,7 +240,7 @@ export const useEditorDocuments = () => {
   );
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (!isStorageHydrated || typeof window === "undefined") {
       return;
     }
 
@@ -160,7 +280,7 @@ export const useEditorDocuments = () => {
     } catch {
       // Ignore storage errors and keep editor usage functional.
     }
-  }, [documents]);
+  }, [documents, isStorageHydrated]);
 
   useEffect(() => {
     if (documents.length === 0) {

@@ -290,17 +290,22 @@ export default function Editor() {
   );
 
   useEffect(() => {
-    if (previousActiveDocumentIdRef.current === activeDocumentId) {
+    const nextActiveDocument = documents.find(
+      (documentItem) => documentItem.id === activeDocumentId,
+    );
+    const nextActiveDocumentHtml = nextActiveDocument?.content ?? "";
+    const currentEditorHtml = editorRef.current?.innerHTML ?? "";
+    const isSameActiveDocument =
+      previousActiveDocumentIdRef.current === activeDocumentId;
+    const isEditorAlreadySynced = currentEditorHtml === nextActiveDocumentHtml;
+
+    if (isSameActiveDocument && isEditorAlreadySynced) {
       return;
     }
 
     previousActiveDocumentIdRef.current = activeDocumentId;
 
-    const nextActiveDocument = documents.find(
-      (documentItem) => documentItem.id === activeDocumentId,
-    );
-
-    applyExternalHtml(nextActiveDocument?.content ?? "");
+    applyExternalHtml(nextActiveDocumentHtml);
     finishBlockDrag();
     clearHoveredDragBlock();
     ensureTitleBlockWhenEditorIsEmpty();
@@ -475,6 +480,7 @@ export default function Editor() {
               suppressContentEditableWarning
               onInput={(event) => {
                 handleInputTransform(event);
+                persistCurrentDocumentHtml();
                 ensureTitleBlockWhenEditorIsEmpty();
                 syncEditorEmptyState();
                 syncToolbarState();

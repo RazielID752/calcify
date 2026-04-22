@@ -79,8 +79,8 @@ export default function CreateDocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0 sm:max-w-2xl">
-        <DialogHeader className="border-b border-zinc-200/80 bg-zinc-50/70 px-6 py-5">
+      <DialogContent className="flex max-h-[calc(100svh-1rem)] w-[calc(100%-1rem)] flex-col overflow-hidden p-0 sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100%-2rem)] sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b border-zinc-200/80 bg-zinc-50/70 px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
               <FileText className="size-4.5" />
@@ -95,7 +95,7 @@ export default function CreateDocumentDialog({
           </div>
         </DialogHeader>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="space-y-4 rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex size-8 items-center justify-center rounded-md bg-emerald-100 text-emerald-700">
@@ -174,7 +174,7 @@ export default function CreateDocumentDialog({
                         <p className="text-sm font-medium text-zinc-700">
                           {template.name}
                         </p>
-                        <p className="break-words text-xs leading-4 text-zinc-500">
+                        <p className="wrap-break-word text-xs leading-4 text-zinc-500">
                           {template.description}
                         </p>
                       </div>

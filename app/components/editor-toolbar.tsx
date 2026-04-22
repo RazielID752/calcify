@@ -21,6 +21,8 @@ import {
   Underline,
   Undo2,
 } from "lucide-react";
+import Image from "next/image";
+import LogoCalcify from "@/assets/logo.svg";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -140,9 +142,7 @@ export default function EditorToolbar({
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max snap-x snap-mandatory items-center justify-start gap-2 md:justify-between sm:gap-3">
             <div className="shrink-0">
-              <h3 className="text-base font-semibold text-zinc-900 sm:text-lg">
-                Calcify
-              </h3>
+              <Image src={LogoCalcify} alt="Calcify" width={80} height={80} className="ml-2" />
             </div>
             <div className={groupClassName}>
               <ToolbarActionButton

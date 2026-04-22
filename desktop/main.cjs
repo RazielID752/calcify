@@ -7,6 +7,11 @@ const { app, BrowserWindow } = require("electron");
 const DEV_URL = process.env.ELECTRON_START_URL;
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.ELECTRON_PORT || 43110);
+const APP_ICON_PATH = path.join(
+  app.getAppPath(),
+  "assets",
+  process.platform === "darwin" ? "icon-big.png" : "icon.ico",
+);
 
 let mainWindow = null;
 let staticServer = null;
@@ -124,6 +129,16 @@ function closeStaticServer() {
 }
 
 async function createMainWindow() {
+  if (process.platform === "darwin" && app.dock?.setIcon) {
+    try {
+      if (await pathExists(APP_ICON_PATH)) {
+        app.dock.setIcon(APP_ICON_PATH);
+      }
+    } catch (error) {
+      console.warn("Nao foi possivel aplicar o icone do dock:", error);
+    }
+  }
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
@@ -131,6 +146,7 @@ async function createMainWindow() {
     minHeight: 640,
     autoHideMenuBar: true,
     backgroundColor: "#0b1220",
+    icon: APP_ICON_PATH,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

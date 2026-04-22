@@ -62,6 +62,7 @@
       "desktop/**/*",
       "out/**/*",
       "public/**/*",
+      "assets/**/*",
       "app/**/*",
       "components/**/*",
       "lib/**/*",
@@ -69,17 +70,21 @@
       "package.json",
       "next.config.ts"
     ],
+    "icon": "assets/icon",
     "mac": {
+      "icon": "assets/icon.icns",
       "target": [
         "dmg"
       ]
     },
     "win": {
+      "icon": "assets/icon.ico",
       "target": [
         "nsis"
       ]
     },
     "linux": {
+      "icon": "assets/icon-big.png",
       "target": [
         "AppImage"
       ]

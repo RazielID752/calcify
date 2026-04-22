@@ -38,7 +38,18 @@ Eu sou o criado do calcify! Editor profissional que aceita markdown.
 - **Conversão tipográfica:** converter automaticamente \`->\` para uma seta \`→\`.
 - **Cálculo automático:** \`10 * 50 / 2 % 0 = 250\`
 - **Reconhecimento de símbolo de dinheiro:** \`50 * $10 = US$ 500,00\`
-- **Conversão de moeda em tempo real:** \`$10 * R$1 = R$ 10,00\`
+- **Conversão de moeda em tempo real:** \`converts: 100 USD to BRL\` → \`100 USD → BRL 496.50\` (usando a cotação atual). 
+
+### Exemplo de comandos para conversão de moeda:
+- **converts:** $10 to R$
+- **converts:** 10 USD to BRL
+- **converts:** €50 to USD
+- **converts:** ¥50 to EUR
+- **converts:** 10JPY to BRL
+
+### O resultado e exibido automaticamente
+- Exemplo: 20 USD → BRL 49.60.
+
 
 \`\`\`js
 JavaCript is life

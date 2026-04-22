@@ -3,6 +3,12 @@
 import { useRef } from "react";
 import { calculateLines } from "@/utils/calculate";
 import {
+  convertCurrency,
+  formatCurrencyConversion,
+  parseConvertCommand,
+  renderCurrencyConversionLineHtml,
+} from "@/utils/currency-conversion";
+import {
   type EditorContext,
   editorCommands,
   type HeadingLevel,
@@ -88,6 +94,9 @@ const isFormattingInput = (event: React.FormEvent<HTMLDivElement>) => {
   return nativeEvent.inputType.startsWith("format");
 };
 
+const normalizeBlockText = (value: string) =>
+  value.replaceAll("\u00A0", " ").replace(/\s+/g, " ").trim();
+
 type UseAutoTransformsParams = {
   editorRef: React.RefObject<HTMLDivElement | null>;
   savedRangeRef: React.RefObject<Range | null>;
@@ -103,6 +112,7 @@ export function useAutoTransforms({
 }: UseAutoTransformsParams) {
   const isApplyingAutoCalcRef = useRef(false);
   const isApplyingAutoMarkdownRef = useRef(false);
+  const currencyConversionRequestIdRef = useRef(0);
 
   const normalizeParagraphDivOnActiveBlock = () => {
     const editor = editorRef.current;
@@ -472,6 +482,69 @@ export function useAutoTransforms({
     return true;
   };
 
+  const applyAutoCurrencyConversionOnActiveBlock = (
+    event: React.FormEvent<HTMLDivElement>,
+  ) => {
+    if (isLineBreakInput(event)) {
+      return false;
+    }
+
+    const block = getActiveBlock();
+
+    if (!block || !["P", "DIV"].includes(block.tagName)) {
+      return false;
+    }
+
+    const rawLine = normalizeBlockText(block.textContent ?? block.innerText);
+    const command = parseConvertCommand(rawLine);
+
+    if (!command) {
+      return false;
+    }
+
+    const requestId = ++currencyConversionRequestIdRef.current;
+    const sourceLineSnapshot = rawLine;
+
+    persistHtml();
+
+    void (async () => {
+      try {
+        const convertedAmount = await convertCurrency(
+          command.amount,
+          command.from,
+          command.to,
+        );
+
+        if (requestId !== currencyConversionRequestIdRef.current) {
+          return;
+        }
+
+        const currentLine = block.innerText.replaceAll("\u00A0", " ").trim();
+
+        if (normalizeBlockText(currentLine) !== sourceLineSnapshot) {
+          return;
+        }
+
+        const convertedLine = formatCurrencyConversion(
+          command,
+          convertedAmount,
+        );
+
+        block.innerHTML = renderCurrencyConversionLineHtml(convertedLine);
+        block.dataset.currencyConversion = "true";
+        block.dataset.currencyConversionFrom = command.from;
+        block.dataset.currencyConversionTo = command.to;
+        block.dataset.currencyConversionAmount = String(command.amount);
+        moveCursorToEnd(block);
+        persistHtml();
+      } catch (error) {
+        console.warn("Falha ao converter moeda automaticamente:", error);
+      }
+    })();
+
+    return true;
+  };
+
   const removeInheritedCalculationStyleOnActiveBlock = () => {
     const block = getActiveBlock();
 
@@ -480,7 +553,8 @@ export function useAutoTransforms({
     }
 
     const rawLine = block.innerText.replaceAll("\u00A0", " ").trim();
-    const hasTriggerLine = rawLine.includes("=") && /[+\-*/^%]/.test(rawLine);
+    const normalizedLine = normalizeBlockText(rawLine);
+    const hasTriggerLine = normalizedLine.includes("=") && /[+\-*/^%]/.test(normalizedLine);
 
     if (hasTriggerLine) {
       return false;
@@ -496,6 +570,10 @@ export function useAutoTransforms({
 
     const plainText = block.innerText.replaceAll("\u00A0", " ");
     block.textContent = plainText;
+    delete block.dataset.currencyConversion;
+    delete block.dataset.currencyConversionFrom;
+    delete block.dataset.currencyConversionTo;
+    delete block.dataset.currencyConversionAmount;
     moveCursorToEnd(block);
     persistHtml();
 
@@ -592,6 +670,13 @@ export function useAutoTransforms({
     const hasCalculationTransform = applyAutoCalculationOnActiveBlock(event);
 
     if (hasCalculationTransform) {
+      return;
+    }
+
+    const hasCurrencyConversionTransform =
+      applyAutoCurrencyConversionOnActiveBlock(event);
+
+    if (hasCurrencyConversionTransform) {
       return;
     }
 

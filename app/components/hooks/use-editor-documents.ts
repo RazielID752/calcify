@@ -22,6 +22,22 @@ type StoredDocument = {
   titleMode: "auto" | "manual";
 };
 
+const getWelcomeDocumentTemplate = (): Document => ({
+  ...createBlankDocument("Marcos Nathanael"),
+  content: renderMarkdownToHtml(FIRST_ACCESS_WELCOME_MARKDOWN),
+  titleMode: "manual",
+});
+
+const isUntouchedWelcomeDocument = (documentItem: Document) => {
+  const welcomeTemplate = getWelcomeDocumentTemplate();
+
+  return (
+    documentItem.titleMode === "manual" &&
+    documentItem.title === welcomeTemplate.title &&
+    documentItem.content === welcomeTemplate.content
+  );
+};
+
 const isTitleMode = (value: unknown): value is "auto" | "manual" =>
   value === "auto" || value === "manual";
 
@@ -85,6 +101,7 @@ export const useEditorDocuments = () => {
   );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isStorageHydrated, setIsStorageHydrated] = useState(false);
+  const [hadStoredDocuments, setHadStoredDocuments] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -92,14 +109,32 @@ export const useEditorDocuments = () => {
     }
 
     try {
-      const storedDocuments = parseStoredDocuments(
+      const parsedStoredDocuments = parseStoredDocuments(
         localStorage.getItem(DOCUMENTS_STORAGE_KEY),
       );
+      const hasSeenWelcome =
+        localStorage.getItem(FIRST_ACCESS_WELCOME_KEY) === "1";
+      const hasStoredUntouchedWelcome =
+        parsedStoredDocuments.length === 1 &&
+        isUntouchedWelcomeDocument(parsedStoredDocuments[0]);
+      const storedDocuments = hasStoredUntouchedWelcome
+        ? []
+        : parsedStoredDocuments;
+
+      if (hasStoredUntouchedWelcome && !hasSeenWelcome) {
+        localStorage.setItem(FIRST_ACCESS_WELCOME_KEY, "1");
+      }
+
+      if (hasStoredUntouchedWelcome) {
+        localStorage.removeItem(DOCUMENTS_STORAGE_KEY);
+        localStorage.removeItem(ACTIVE_DOCUMENT_ID_STORAGE_KEY);
+      }
 
       if (storedDocuments.length === 0) {
         return;
       }
 
+      setHadStoredDocuments(true);
       setDocuments(storedDocuments);
 
       const storedActiveDocumentId = localStorage.getItem(
@@ -128,6 +163,16 @@ export const useEditorDocuments = () => {
     }
 
     try {
+      if (
+        documents.length === 1 &&
+        isUntouchedWelcomeDocument(documents[0]) &&
+        localStorage.getItem(FIRST_ACCESS_WELCOME_KEY) === "1"
+      ) {
+        localStorage.removeItem(DOCUMENTS_STORAGE_KEY);
+        localStorage.removeItem(ACTIVE_DOCUMENT_ID_STORAGE_KEY);
+        return;
+      }
+
       const serializedDocuments = documents.map((documentItem) => ({
         ...documentItem,
         createdAt: documentItem.createdAt.toISOString(),
@@ -244,6 +289,10 @@ export const useEditorDocuments = () => {
       return;
     }
 
+    if (hadStoredDocuments) {
+      return;
+    }
+
     try {
       const hasSeenWelcome =
         localStorage.getItem(FIRST_ACCESS_WELCOME_KEY) === "1";
@@ -267,20 +316,14 @@ export const useEditorDocuments = () => {
         return;
       }
 
-      const welcomeHtml = renderMarkdownToHtml(FIRST_ACCESS_WELCOME_MARKDOWN);
-
-      const welcomeDocument: Document = {
-        ...createBlankDocument("Marcos Nathanael"),
-        content: welcomeHtml,
-        titleMode: "manual",
-      };
+      const welcomeDocument = getWelcomeDocumentTemplate();
 
       setDocuments([welcomeDocument]);
       setActiveDocumentId(welcomeDocument.id);
     } catch {
       // Ignore storage errors and keep editor usage functional.
     }
-  }, [documents, isStorageHydrated]);
+  }, [documents, hadStoredDocuments, isStorageHydrated]);
 
   useEffect(() => {
     if (documents.length === 0) {

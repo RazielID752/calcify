@@ -5,6 +5,7 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  CircleHelp,
   Code,
   Highlighter,
   ImagePlus,
@@ -83,6 +84,7 @@ type EditorToolbarProps = {
   onInsertPi: () => void;
   onRenderMarkdown: () => void;
   onCopyMarkdown: () => void;
+  onHelp: () => void;
 };
 
 const stopFocusLoss = (event: React.MouseEvent<HTMLElement>) => {
@@ -130,6 +132,7 @@ export default function EditorToolbar({
   onAlignRight,
   onImage,
   onMathChange,
+  onHelp,
 }: EditorToolbarProps) {
   const activeButtonClass =
     "border-zinc-900/10 bg-zinc-900/5 text-emerald-600 hover:bg-zinc-900/10 hover:text-emerald-700";
@@ -142,7 +145,13 @@ export default function EditorToolbar({
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max snap-x snap-mandatory items-center justify-start gap-2 md:justify-between sm:gap-3">
             <div className="shrink-0">
-              <Image src={LogoCalcify} alt="Calcify" width={80} height={80} className="ml-2" />
+              <Image
+                src={LogoCalcify}
+                alt="Calcify"
+                width={80}
+                height={80}
+                className="ml-2"
+              />
             </div>
             <div className={groupClassName}>
               <ToolbarActionButton
@@ -383,6 +392,17 @@ export default function EditorToolbar({
               >
                 <ImagePlus />
               </ToolbarActionButton>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onMouseDown={stopFocusLoss}
+                onClick={onHelp}
+              >
+                <CircleHelp className="size-4" />
+                Ajuda
+              </Button>
             </div>
 
             <div className="hidden h-7 w-px bg-zinc-200 sm:block" />

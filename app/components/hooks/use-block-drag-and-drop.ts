@@ -317,8 +317,11 @@ export const useBlockDragAndDrop = ({
       for (const candidate of candidates) {
         const rect = candidate.getBoundingClientRect();
         const midpoint = rect.top + rect.height / 2;
+        const isMovingDown =
+          source.compareDocumentPosition(candidate) &
+          Node.DOCUMENT_POSITION_FOLLOWING;
 
-        if (clientY < midpoint) {
+        if (clientY < midpoint || (isMovingDown && clientY <= rect.top + 4)) {
           insertionBefore = candidate;
           break;
         }

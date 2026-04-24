@@ -13,6 +13,8 @@ export const FIRST_ACCESS_WELCOME_KEY = "calcify_first_access_welcome_seen_v1";
 export const INITIAL_DOCUMENT_ID = "initial-document";
 export const TITLE_PLACEHOLDER = "Título";
 export const BODY_PLACEHOLDER = "Digite algum texto...";
+export const EMPTY_EDITOR_HTML = "<h1><br></h1><p><br></p>";
+export const HELP_DIALOG_STORAGE_KEY = "calcify_help_dialog_seen_v1";
 
 export const FIRST_ACCESS_WELCOME_MARKDOWN = `# Marcos Nathanael
 

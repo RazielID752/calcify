@@ -457,6 +457,10 @@ export function useAutoTransforms({
       return false;
     }
 
+    if (block.querySelector('[data-calc-result="true"]')) {
+      return false;
+    }
+
     const rawLine = block.innerText.replaceAll("\u00A0", " ").trim();
     const hasTriggerLine = rawLine.includes("=") && /[+\-*/^%]/.test(rawLine);
 
@@ -554,7 +558,8 @@ export function useAutoTransforms({
 
     const rawLine = block.innerText.replaceAll("\u00A0", " ").trim();
     const normalizedLine = normalizeBlockText(rawLine);
-    const hasTriggerLine = normalizedLine.includes("=") && /[+\-*/^%]/.test(normalizedLine);
+    const hasTriggerLine =
+      normalizedLine.includes("=") && /[+\-*/^%]/.test(normalizedLine);
 
     if (hasTriggerLine) {
       return false;

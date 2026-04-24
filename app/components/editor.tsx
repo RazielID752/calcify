@@ -15,9 +15,12 @@ import { EDITOR_CONTENT_CLASSNAME } from "./editor-content-classname";
 import {
   BODY_PLACEHOLDER,
   DEFAULT_DOCUMENT_TITLE,
+  EMPTY_EDITOR_HTML,
+  HELP_DIALOG_STORAGE_KEY,
   hasMeaningfulEditorContent,
   TITLE_PLACEHOLDER,
 } from "./editor-document";
+import EditorHelpDialog from "./editor-help-dialog";
 import EditorToolbar from "./editor-toolbar";
 import { useAutoTransforms } from "./hooks/use-auto-transforms";
 import { useBlockDragAndDrop } from "./hooks/use-block-drag-and-drop";
@@ -61,48 +64,93 @@ export default function Editor() {
   });
 
   const [zoom, setZoom] = useState(100);
-  const [isEditorEmpty, setIsEditorEmpty] = useState(true);
+  const [isTitleEmpty, setIsTitleEmpty] = useState(true);
+  const [isBodyEmpty, setIsBodyEmpty] = useState(true);
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
 
-  const ensureTitleBlockWhenEditorIsEmpty = useCallback(
-    (options?: { moveCaretToTitle?: boolean }) => {
+    try {
+      return localStorage.getItem(HELP_DIALOG_STORAGE_KEY) !== "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const ensureEditorScaffoldWhenEmpty = useCallback(
+    (options?: { moveCaretTo?: "title" | "body" }) => {
       const editor = editorRef.current;
 
       if (!editor) {
-        return;
+        return false;
       }
 
       const html = editor.innerHTML;
       const isEmpty = !hasMeaningfulEditorContent(html);
 
       if (!isEmpty) {
-        setIsEditorEmpty(false);
-        return;
+        return false;
       }
 
       const firstElement = editor.firstElementChild;
       const firstElementIsTitle =
         firstElement instanceof HTMLHeadingElement &&
-        firstElement.tagName === "H1" &&
-        editor.children.length === 1;
+        firstElement.tagName === "H1";
+      const secondElement = editor.children[1];
+      const secondElementIsBody =
+        secondElement instanceof HTMLElement &&
+        ["P", "DIV"].includes(secondElement.tagName);
 
-      if (!firstElementIsTitle) {
-        editor.innerHTML = "<h1><br></h1>";
+      if (!firstElementIsTitle || !secondElementIsBody) {
+        editor.innerHTML = EMPTY_EDITOR_HTML;
       }
 
       const titleElement = editor.querySelector("h1");
+      const bodyElement = editor.querySelector("p,div");
 
-      if (options?.moveCaretToTitle && titleElement instanceof HTMLElement) {
+      if (
+        options?.moveCaretTo === "title" &&
+        titleElement instanceof HTMLElement
+      ) {
         moveCursorToEnd(titleElement);
       }
 
-      setIsEditorEmpty(true);
+      if (
+        options?.moveCaretTo === "body" &&
+        bodyElement instanceof HTMLElement
+      ) {
+        moveCursorToEnd(bodyElement);
+      }
+
+      return true;
     },
     [editorRef, moveCursorToEnd],
   );
 
+  const ensureTitleBlockWhenEditorIsEmpty = useCallback(
+    (options?: { moveCaretTo?: "title" | "body" }) => {
+      return ensureEditorScaffoldWhenEmpty(options);
+    },
+    [ensureEditorScaffoldWhenEmpty],
+  );
+
   const syncEditorEmptyState = useCallback(() => {
-    const html = editorRef.current?.innerHTML ?? "";
-    setIsEditorEmpty(!hasMeaningfulEditorContent(html));
+    const editor = editorRef.current;
+
+    const titleText =
+      editor
+        ?.querySelector("h1")
+        ?.textContent?.replaceAll("\u00A0", " ")
+        .trim() ?? "";
+    const bodyText =
+      editor
+        ?.querySelector("p,div")
+        ?.textContent?.replaceAll("\u00A0", " ")
+        .trim() ?? "";
+
+    setIsTitleEmpty(titleText.length === 0);
+    setIsBodyEmpty(bodyText.length === 0);
   }, [editorRef]);
 
   const {
@@ -250,6 +298,18 @@ export default function Editor() {
 
   // Atalho: Ctrl+Shift+M para renderizar Markdown
   useEffect(() => {
+    if (!isHelpDialogOpen) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(HELP_DIALOG_STORAGE_KEY, "1");
+    } catch {
+      // Ignore storage errors to avoid breaking editor usage.
+    }
+  }, [isHelpDialogOpen]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "m") {
         e.preventDefault();
@@ -294,7 +354,7 @@ export default function Editor() {
       (documentItem) => documentItem.id === activeDocumentId,
     );
     const nextActiveDocumentHtml = nextActiveDocument?.content ?? "";
-    const currentEditorHtml = editorRef.current?.innerHTML ?? "";
+    const currentEditorHtml = getCurrentEditorHtml();
     const isSameActiveDocument =
       previousActiveDocumentIdRef.current === activeDocumentId;
     const isEditorAlreadySynced = currentEditorHtml === nextActiveDocumentHtml;
@@ -308,17 +368,24 @@ export default function Editor() {
     applyExternalHtml(nextActiveDocumentHtml);
     finishBlockDrag();
     clearHoveredDragBlock();
-    ensureTitleBlockWhenEditorIsEmpty();
+    ensureEditorScaffoldWhenEmpty();
     updateSavedRange();
-    syncEditorEmptyState();
-    syncToolbarState();
+    const animationFrameId = window.requestAnimationFrame(() => {
+      syncEditorEmptyState();
+      syncToolbarState();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
   }, [
     activeDocumentId,
     applyExternalHtml,
     clearHoveredDragBlock,
     documents,
-    ensureTitleBlockWhenEditorIsEmpty,
+    ensureEditorScaffoldWhenEmpty,
     finishBlockDrag,
+    getCurrentEditorHtml,
     syncEditorEmptyState,
     syncToolbarState,
     updateSavedRange,
@@ -336,7 +403,7 @@ export default function Editor() {
         return;
       }
 
-      ensureTitleBlockWhenEditorIsEmpty({ moveCaretToTitle: true });
+      ensureTitleBlockWhenEditorIsEmpty({ moveCaretTo: "body" });
       editor.focus();
       updateSavedRange();
       syncEditorEmptyState();
@@ -433,21 +500,28 @@ export default function Editor() {
           onInsertPi={() => insertMathShortcut("pi")}
           onRenderMarkdown={handleRenderMarkdown}
           onCopyMarkdown={handleCopyMarkdown}
+          onHelp={() => setIsHelpDialogOpen(true)}
         />
 
         <div className="p-3 sm:p-3">
           <div className="relative">
-            {isEditorEmpty ? (
+            {isTitleEmpty || isBodyEmpty ? (
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-x-0 top-0 z-10 select-none"
               >
-                <p className="text-4xl font-bold text-zinc-300">
-                  {TITLE_PLACEHOLDER}
-                </p>
-                <p className="mt-5 text-base text-zinc-400">
-                  {BODY_PLACEHOLDER}
-                </p>
+                {isTitleEmpty ? (
+                  <p className="text-4xl font-bold text-zinc-300">
+                    {TITLE_PLACEHOLDER}
+                  </p>
+                ) : null}
+                {isBodyEmpty ? (
+                  <p
+                    className={`text-base text-zinc-400 ${isTitleEmpty ? "mt-5" : "mt-18"}`}
+                  >
+                    {BODY_PLACEHOLDER}
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -472,11 +546,15 @@ export default function Editor() {
               />
             ) : null}
 
-            {/* biome-ignore lint/a11y/noStaticElementInteractions: um editor rich text obrigatoriamente precisa usar uma div com contentEditable. */}
+            {/* biome-ignore lint/a11y/useSemanticElements: um editor rich text precisa de contentEditable para suportar blocos formatados. */}
             <div
               ref={editorRef}
               className={EDITOR_CONTENT_CLASSNAME}
               contentEditable
+              tabIndex={0}
+              role="textbox"
+              aria-multiline="true"
+              aria-label="Editor de texto do Calcify"
               suppressContentEditableWarning
               onInput={(event) => {
                 handleInputTransform(event);
@@ -499,7 +577,7 @@ export default function Editor() {
                 syncToolbarState();
               }}
               onFocus={() => {
-                ensureTitleBlockWhenEditorIsEmpty({ moveCaretToTitle: true });
+                ensureTitleBlockWhenEditorIsEmpty();
                 updateSavedRange();
                 syncEditorEmptyState();
                 syncToolbarState();
@@ -528,6 +606,11 @@ export default function Editor() {
             onOpenChange={setIsImageDialogOpen}
             onInsertImage={handleInsertImage}
             onRemoveImage={handleRemoveImage}
+          />
+
+          <EditorHelpDialog
+            open={isHelpDialogOpen}
+            onOpenChange={setIsHelpDialogOpen}
           />
         </div>
       </div>

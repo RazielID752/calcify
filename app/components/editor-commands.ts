@@ -109,6 +109,36 @@ const getSelectionElement = (node: Node | null) => {
     : (node as Element);
 };
 
+const getClosestBlockElement = (context: EditorContext) => {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return null;
+  }
+
+  const anchorElement = getSelectionElement(selection.anchorNode);
+  const focusElement = getSelectionElement(selection.focusNode);
+  const selectors = "p,div,h1,h2,h3,h4,blockquote,pre,li";
+
+  const anchorBlock = anchorElement?.closest(selectors);
+  if (
+    anchorBlock instanceof HTMLElement &&
+    context.editor.contains(anchorBlock)
+  ) {
+    return anchorBlock;
+  }
+
+  const focusBlock = focusElement?.closest(selectors);
+  if (
+    focusBlock instanceof HTMLElement &&
+    context.editor.contains(focusBlock)
+  ) {
+    return focusBlock;
+  }
+
+  return null;
+};
+
 const findScriptAncestor = (
   element: Element | null,
   editor: HTMLElement,
@@ -414,6 +444,22 @@ export const editorCommands = {
     );
   },
   blockquote(context: EditorContext) {
+    restoreSelection(context);
+
+    const currentBlock = getClosestBlockElement(context);
+    const activeBlockquote =
+      currentBlock?.tagName === "BLOCKQUOTE"
+        ? currentBlock
+        : currentBlock?.closest("blockquote");
+
+    if (activeBlockquote instanceof HTMLElement) {
+      for (const option of ["P", "p", "<p>"]) {
+        if (document.execCommand("formatBlock", false, option)) {
+          return;
+        }
+      }
+    }
+
     runExecCommand(context, "formatBlock", "blockquote");
   },
   codeBlock(context: EditorContext) {

@@ -5,6 +5,7 @@ import type {
   FormEventHandler,
   KeyboardEventHandler,
   MouseEventHandler,
+  ReactNode,
   RefObject,
 } from "react";
 import { EDITOR_CONTENT_CLASSNAME } from "./editor-content-classname";
@@ -17,8 +18,10 @@ type EditorWritingSurfaceProps = {
   isBodyEmpty: boolean;
   isDraggingBlock: boolean;
   isTitleEmpty: boolean;
+  spellcheckPopover: ReactNode;
   onBlur: FocusEventHandler<HTMLDivElement>;
   onBeforeInput: FormEventHandler<HTMLDivElement>;
+  onClick: MouseEventHandler<HTMLDivElement>;
   onFocus: FocusEventHandler<HTMLDivElement>;
   onInput: FormEventHandler<HTMLDivElement>;
   onKeyDown: KeyboardEventHandler<HTMLDivElement>;
@@ -35,8 +38,10 @@ export default function EditorWritingSurface({
   isBodyEmpty,
   isDraggingBlock,
   isTitleEmpty,
+  spellcheckPopover,
   onBlur,
   onBeforeInput,
+  onClick,
   onFocus,
   onInput,
   onKeyDown,
@@ -97,7 +102,10 @@ export default function EditorWritingSurface({
         role="textbox"
         aria-multiline="true"
         aria-label="Editor de texto do Calcify"
+        spellCheck
+        lang="pt-BR"
         suppressContentEditableWarning
+        onClick={onClick}
         onInput={onInput}
         onBeforeInput={onBeforeInput}
         onPaste={onPaste}
@@ -107,6 +115,7 @@ export default function EditorWritingSurface({
         onFocus={onFocus}
         onBlur={onBlur}
       />
+      {spellcheckPopover}
     </div>
   );
 }

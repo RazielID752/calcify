@@ -29,10 +29,17 @@ export default function EditorHelpDialog({
 }: EditorHelpDialogProps) {
   const keyboardShortcuts = [
     {
+      platformIcon: "⊞",
+      platformLabel: "Windows",
       keys: ["Ctrl", "Shift", "M"],
       description: "Renderiza Markdown manualmente.",
     },
-    { keys: ["Cmd", "Shift", "M"], description: "Mesmo atalho no macOS." },
+    {
+      platformIcon: "⌘",
+      platformLabel: "Apple",
+      keys: ["Cmd", "Shift", "M"],
+      description: "Mesmo atalho no macOS.",
+    },
     { keys: ["Tab"], description: "Insere indentação dentro do editor." },
   ];
 
@@ -111,7 +118,7 @@ export default function EditorHelpDialog({
           <section className="rounded-xl border border-zinc-200/80 bg-white p-4">
             <div className="mb-3 flex items-center gap-2 font-semibold text-zinc-900">
               <Keyboard className="size-4 text-emerald-700" />
-              Produtividade
+              Atalhos para aumentar a Produtividade
             </div>
             <div className="space-y-2">
               {keyboardShortcuts.map((shortcut) => (
@@ -120,6 +127,15 @@ export default function EditorHelpDialog({
                   className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex flex-wrap items-center gap-1">
+                    {"platformIcon" in shortcut ? (
+                      <span
+                        title={shortcut.platformLabel}
+                        className="mr-1 inline-flex h-6 items-center justify-center gap-1 rounded border border-zinc-300 bg-white px-2 text-xs font-semibold text-zinc-700"
+                      >
+                        {shortcut.platformIcon}
+                        <span>{shortcut.platformLabel}</span>
+                      </span>
+                    ) : null}
                     {shortcut.keys.map((key) => (
                       <kbd
                         key={`${shortcut.description}-${key}`}

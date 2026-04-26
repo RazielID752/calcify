@@ -568,6 +568,7 @@ export const useEditorAccountSync = ({
 
   return {
     authenticatedUser,
+    authToken,
     flushAutosave,
     handleCloseDocument,
     handleConfirmLogout,

@@ -26,6 +26,7 @@ import { useEditorEmptyState } from "./hooks/use-editor-empty-state";
 import { useEditorHelpDialog } from "./hooks/use-editor-help-dialog";
 import { useEditorMarkdownShortcut } from "./hooks/use-editor-markdown-shortcut";
 import { useEditorSession } from "./hooks/use-editor-session";
+import { useEditorSpellcheck } from "./hooks/use-editor-spellcheck";
 import { useEditorToolbarState } from "./hooks/use-editor-toolbar-state";
 import { useMarkdownRenderer } from "./hooks/use-markdown-renderer";
 import ZoomControls from "./zoom-controls";
@@ -102,6 +103,7 @@ export default function Editor() {
 
   const {
     authenticatedUser,
+    authToken,
     flushAutosave,
     handleCloseDocument,
     handleConfirmLogout,
@@ -243,6 +245,22 @@ export default function Editor() {
       run,
     });
 
+  const activeDocumentContent =
+    documents.find((documentItem) => documentItem.id === activeDocumentId)
+      ?.content ?? "";
+  const { handleSpellcheckClick, popover, scheduleSpellcheck } =
+    useEditorSpellcheck({
+      authToken,
+      editorRef,
+      refreshKey: `${activeDocumentId}:${activeDocumentContent}`,
+      onEditorChange: () => {
+        persistCurrentDocumentHtml();
+        scheduleAutosave();
+        syncEditorEmptyState();
+        syncToolbarState();
+      },
+    });
+
   const handleHeading = (level: HeadingLevel) => {
     window.setTimeout(() => {
       run((context) => editorCommands.heading(context, level));
@@ -367,6 +385,7 @@ export default function Editor() {
             isBodyEmpty={isBodyEmpty}
             isDraggingBlock={isDraggingBlock}
             isTitleEmpty={isTitleEmpty}
+            spellcheckPopover={popover}
             onStartBlockDrag={handleStartBlockDrag}
             onInput={(event) => {
               handleInputTransform(event);
@@ -375,8 +394,10 @@ export default function Editor() {
               ensureTitleBlockWhenEditorIsEmpty();
               syncEditorEmptyState();
               syncToolbarState();
+              scheduleSpellcheck();
             }}
             onBeforeInput={handleEditorBeforeInput}
+            onClick={handleSpellcheckClick}
             onPaste={handlePaste}
             onKeyDown={handleEditorKeyDown}
             onMouseUp={() => {
@@ -388,6 +409,7 @@ export default function Editor() {
               updateSavedRange();
               syncEditorEmptyState();
               syncToolbarState();
+              scheduleSpellcheck();
             }}
             onFocus={() => {
               ensureTitleBlockWhenEditorIsEmpty();

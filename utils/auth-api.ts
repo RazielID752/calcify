@@ -34,6 +34,10 @@ type UpsertDocumentPayload = {
   isDraft: boolean;
 };
 
+type UpsertDocumentOptions = {
+  knownUpdatedAt?: string;
+};
+
 type UpsertDocumentApiResponse = {
   id: string;
   title: string;
@@ -97,6 +101,16 @@ const normalizeDocumentResponse = (
     updatedAt,
   };
 };
+
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
 
 export async function loginWithApi(credentials: LoginCredentials) {
   const response = await fetch(`${resolveApiBaseUrl()}/api/auth/login`, {
@@ -180,18 +194,25 @@ export async function upsertDocumentWithApi(
   token: string,
   documentId: string,
   payload: UpsertDocumentPayload,
+  options?: UpsertDocumentOptions,
 ) {
   const shouldTryUpdate = GUID_REGEX.test(documentId);
 
   if (shouldTryUpdate) {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+
+    if (options?.knownUpdatedAt) {
+      headers["If-Unmodified-Since"] = options.knownUpdatedAt;
+    }
+
     const updateResponse = await fetch(
       `${resolveApiBaseUrl()}/api/documents/${documentId}`,
       {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         body: JSON.stringify(payload),
       },
     );
@@ -210,8 +231,12 @@ export async function upsertDocumentWithApi(
     if (updateResponse.status !== 404) {
       const data = (await updateResponse.json().catch(() => ({}))) as {
         message?: string;
+        Message?: string;
       };
-      throw new Error(data.message ?? "Não foi possível salvar o documento.");
+      throw new ApiRequestError(
+        data.message ?? data.Message ?? "Não foi possível salvar o documento.",
+        updateResponse.status,
+      );
     }
   }
 
@@ -227,10 +252,11 @@ export async function upsertDocumentWithApi(
   const createdData = await createResponse.json().catch(() => ({}));
 
   if (!createResponse.ok) {
-    throw new Error(
+    throw new ApiRequestError(
       (createdData as { message?: string; Message?: string }).message ??
         (createdData as { message?: string; Message?: string }).Message ??
         "Não foi possível criar o documento.",
+      createResponse.status,
     );
   }
 

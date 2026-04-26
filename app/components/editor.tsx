@@ -2,6 +2,15 @@
 
 import { GripVertical } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  deleteDocumentWithApi,
+  fetchDocumentsWithApi,
+  isGuid,
+  loginWithApi,
+  logoutWithApi,
+  upsertDocumentWithApi,
+} from "@/utils/auth-api";
 import { renderMarkdownToHtml } from "@/utils/render-markdown";
 import DocumentTabsBar from "./document-tabs-bar";
 import {
@@ -16,11 +25,16 @@ import {
   BODY_PLACEHOLDER,
   DEFAULT_DOCUMENT_TITLE,
   EMPTY_EDITOR_HTML,
+  FIRST_ACCESS_WELCOME_KEY,
   HELP_DIALOG_STORAGE_KEY,
   hasMeaningfulEditorContent,
   TITLE_PLACEHOLDER,
 } from "./editor-document";
 import EditorHelpDialog from "./editor-help-dialog";
+import EditorImportDialog from "./editor-import-dialog";
+import EditorLoginDialog from "./editor-login-dialog";
+import EditorLogoutDialog from "./editor-logout-dialog";
+import EditorQuickMenu from "./editor-quick-menu";
 import EditorToolbar from "./editor-toolbar";
 import { useAutoTransforms } from "./hooks/use-auto-transforms";
 import { useBlockDragAndDrop } from "./hooks/use-block-drag-and-drop";
@@ -35,20 +49,33 @@ import LinkDialog from "./link-dialog";
 import ZoomControls from "./zoom-controls";
 
 export default function Editor() {
+  const AUTH_TOKEN_STORAGE_KEY = "calcify_auth_token_v1";
+  const AUTH_USER_STORAGE_KEY = "calcify_auth_user_v1";
+  const DOCUMENTS_STORAGE_KEY = "calcify_documents_v1";
+  const ACTIVE_DOCUMENT_ID_STORAGE_KEY = "calcify_active_document_id_v1";
+  type AuthUser = {
+    id: string;
+    name: string;
+    email: string;
+    lastLoginAt: string | null;
+  };
+
   const {
     documents,
     setDocuments,
+    hadStoredDocuments,
     activeDocumentId,
     setActiveDocumentId,
     isCreateDialogOpen,
     setIsCreateDialogOpen,
     handleOpenCreateDocumentDialog,
     handleCreateDocument,
-    handleCloseDocument,
+    handleCloseDocument: handleCloseDocumentLocal,
     handleRenameDocument,
     updateActiveDocumentContent,
   } = useEditorDocuments();
   const previousActiveDocumentIdRef = useRef<string>(activeDocumentId);
+  const isSavingDocumentRef = useRef(false);
 
   const {
     editorRef,
@@ -66,6 +93,16 @@ export default function Editor() {
   const [zoom, setZoom] = useState(100);
   const [isTitleEmpty, setIsTitleEmpty] = useState(true);
   const [isBodyEmpty, setIsBodyEmpty] = useState(true);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [isLoginSubmitting, setIsLoginSubmitting] = useState(false);
+  const [isLogoutSubmitting, setIsLogoutSubmitting] = useState(false);
+  const [loginErrorMessage, setLoginErrorMessage] = useState("");
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(
+    null,
+  );
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -137,20 +174,41 @@ export default function Editor() {
 
   const syncEditorEmptyState = useCallback(() => {
     const editor = editorRef.current;
+    const rootChildren = editor
+      ? (Array.from(editor.children) as HTMLElement[])
+      : [];
+    const firstChild = rootChildren[0] ?? null;
+    const titleElement =
+      firstChild instanceof HTMLElement && firstChild.tagName === "H1"
+        ? firstChild
+        : null;
+    const bodyElement = titleElement
+      ? (rootChildren[1] ?? null)
+      : (firstChild ?? null);
 
     const titleText =
-      editor
-        ?.querySelector("h1")
-        ?.textContent?.replaceAll("\u00A0", " ")
-        .trim() ?? "";
+      titleElement?.textContent?.replaceAll("\u00A0", " ").trim() ?? "";
     const bodyText =
-      editor
-        ?.querySelector("p,div")
-        ?.textContent?.replaceAll("\u00A0", " ")
-        .trim() ?? "";
+      bodyElement?.textContent?.replaceAll("\u00A0", " ").trim() ?? "";
+    const bodyHasMeaningfulContent = bodyElement
+      ? hasMeaningfulEditorContent(bodyElement.innerHTML)
+      : false;
+
+    const selection = window.getSelection();
+    const hasCaretInBody = Boolean(
+      selection &&
+        selection.rangeCount > 0 &&
+        bodyElement &&
+        (bodyElement.contains(selection.anchorNode) ||
+          bodyElement === selection.anchorNode ||
+          bodyElement.contains(selection.focusNode) ||
+          bodyElement === selection.focusNode),
+    );
 
     setIsTitleEmpty(titleText.length === 0);
-    setIsBodyEmpty(bodyText.length === 0);
+    setIsBodyEmpty(
+      !bodyHasMeaningfulContent && bodyText.length === 0 && !hasCaretInBody,
+    );
   }, [editorRef]);
 
   const {
@@ -310,6 +368,104 @@ export default function Editor() {
   }, [isHelpDialogOpen]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const storedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+      const rawUser = localStorage.getItem(AUTH_USER_STORAGE_KEY);
+
+      if (storedToken && storedToken.trim().length > 0) {
+        setAuthToken(storedToken);
+      }
+
+      if (!rawUser) {
+        return;
+      }
+
+      const parsedUser = JSON.parse(rawUser) as Partial<AuthUser>;
+
+      if (
+        typeof parsedUser.name === "string" &&
+        typeof parsedUser.email === "string"
+      ) {
+        setAuthenticatedUser({
+          id:
+            typeof parsedUser.id === "string" && parsedUser.id.trim().length > 0
+              ? parsedUser.id
+              : "",
+          name: parsedUser.name,
+          email: parsedUser.email,
+          lastLoginAt:
+            typeof parsedUser.lastLoginAt === "string"
+              ? parsedUser.lastLoginAt
+              : null,
+        });
+      }
+    } catch {
+      // Ignore parsing/storage errors.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!authToken || !authenticatedUser) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    void fetchDocumentsWithApi(authToken)
+      .then((items) => {
+        if (isCancelled || items.length === 0) {
+          return;
+        }
+
+        const apiDocuments = items.map((item) => ({
+          id: item.id,
+          title: item.title?.trim() || DEFAULT_DOCUMENT_TITLE,
+          content: item.content ?? "",
+          createdAt: new Date(item.createdAt),
+          titleMode: "manual" as const,
+        }));
+
+        if (!hadStoredDocuments) {
+          setDocuments(apiDocuments);
+          setActiveDocumentId(apiDocuments[0].id);
+          return;
+        }
+
+        setDocuments((previousDocuments) => {
+          const existingIds = new Set(
+            previousDocuments.map((documentItem) => documentItem.id),
+          );
+          const missingApiDocuments = apiDocuments.filter(
+            (documentItem) => !existingIds.has(documentItem.id),
+          );
+
+          if (missingApiDocuments.length === 0) {
+            return previousDocuments;
+          }
+
+          return [...previousDocuments, ...missingApiDocuments];
+        });
+      })
+      .catch(() => {
+        return;
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    authToken,
+    authenticatedUser,
+    hadStoredDocuments,
+    setActiveDocumentId,
+    setDocuments,
+  ]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "m") {
         e.preventDefault();
@@ -337,6 +493,214 @@ export default function Editor() {
     }
   };
 
+  const handleOpenHelpFromMenu = useCallback(() => {
+    setIsHelpDialogOpen(true);
+  }, []);
+
+  const handleSaveDocument = useCallback(async () => {
+    if (isSavingDocumentRef.current) {
+      return;
+    }
+
+    isSavingDocumentRef.current = true;
+    const savingToastId = toast.loading("Salvando documento...");
+    try {
+      persistCurrentDocumentHtml();
+
+      if (!authToken || !authenticatedUser) {
+        toast.success("Documento salvo.", { id: savingToastId });
+        return;
+      }
+
+      const activeDocument = documents.find(
+        (documentItem) => documentItem.id === activeDocumentId,
+      );
+
+      if (!activeDocument) {
+        toast.error("Não foi possível localizar o documento ativo.", {
+          id: savingToastId,
+        });
+        return;
+      }
+
+      const savedDocument = await upsertDocumentWithApi(
+        authToken,
+        activeDocument.id,
+        {
+          title: activeDocument.title?.trim() || DEFAULT_DOCUMENT_TITLE,
+          content: activeDocument.content ?? "",
+          isDraft: false,
+        },
+      );
+
+      setDocuments((previousDocuments) =>
+        previousDocuments.map((documentItem) => {
+          if (documentItem.id !== activeDocument.id) {
+            return documentItem;
+          }
+
+          return {
+            ...documentItem,
+            id: savedDocument.id,
+            title: savedDocument.title?.trim() || DEFAULT_DOCUMENT_TITLE,
+            content: savedDocument.content ?? "",
+          };
+        }),
+      );
+
+      if (savedDocument.id !== activeDocument.id) {
+        setActiveDocumentId(savedDocument.id);
+      }
+
+      toast.success("Documento salvo.", { id: savingToastId });
+    } catch {
+      // Keep local save even when API persistence fails.
+      toast.warning("API indisponível. Salvando apenas localmente.", {
+        id: savingToastId,
+      });
+    } finally {
+      isSavingDocumentRef.current = false;
+    }
+  }, [
+    activeDocumentId,
+    authToken,
+    authenticatedUser,
+    documents,
+    persistCurrentDocumentHtml,
+    setActiveDocumentId,
+    setDocuments,
+  ]);
+
+  const handleExportDocument = useCallback(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    const markdown = editorCommands.htmlToMarkdown(editor.innerHTML);
+    const activeDocument = documents.find(
+      (documentItem) => documentItem.id === activeDocumentId,
+    );
+    const rawTitle = activeDocument?.title.trim() || DEFAULT_DOCUMENT_TITLE;
+    const safeTitle = Array.from(rawTitle)
+      .filter((character) => {
+        const code = character.codePointAt(0) ?? 0;
+
+        return (
+          code >= 32 &&
+          !["<", ">", ":", '"', "/", "\\", "|", "?", "*"].includes(character)
+        );
+      })
+      .join("")
+      .replace(/\s+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase();
+    const fileName = safeTitle.length > 0 ? safeTitle : "documento";
+    const blob = new Blob([markdown], {
+      type: "text/markdown;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+
+    anchor.href = url;
+    anchor.download = `${fileName}.md`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, [activeDocumentId, documents, editorRef]);
+
+  const handleOpenImportDialog = useCallback(() => {
+    setIsImportDialogOpen(true);
+  }, []);
+
+  const handleImportMarkdownDocument = useCallback(
+    (markdown: string) => {
+      const html = renderMarkdownToHtml(markdown);
+      applyHtmlToActiveDocument(html);
+      ensureTitleBlockWhenEditorIsEmpty();
+      syncEditorEmptyState();
+      syncToolbarState();
+    },
+    [
+      applyHtmlToActiveDocument,
+      ensureTitleBlockWhenEditorIsEmpty,
+      syncEditorEmptyState,
+      syncToolbarState,
+    ],
+  );
+
+  const handleOpenGithub = useCallback(() => {
+    window.open(
+      "https://github.com/RazielID752",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }, []);
+
+  const handleLogin = useCallback(() => {
+    setLoginErrorMessage("");
+    setIsLoginDialogOpen(true);
+  }, []);
+
+  const handleContinueLogin = useCallback(
+    async (credentials: { login: string; password: string }) => {
+      setIsLoginSubmitting(true);
+      setLoginErrorMessage("");
+
+      try {
+        const response = await loginWithApi(credentials);
+        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.token);
+        localStorage.setItem(
+          AUTH_USER_STORAGE_KEY,
+          JSON.stringify(response.user),
+        );
+        setAuthToken(response.token);
+        setAuthenticatedUser(response.user);
+        setIsLoginDialogOpen(false);
+      } catch (error) {
+        const fallbackMessage = "Não foi possível realizar o login.";
+        const message =
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : fallbackMessage;
+        setLoginErrorMessage(message);
+      } finally {
+        setIsLoginSubmitting(false);
+      }
+    },
+    [],
+  );
+
+  const handleLogoutRequest = useCallback(() => {
+    setIsLogoutDialogOpen(true);
+  }, []);
+
+  const handleConfirmLogout = useCallback(async () => {
+    setIsLogoutSubmitting(true);
+
+    try {
+      const currentToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+
+      if (currentToken) {
+        await logoutWithApi(currentToken).catch(() => {
+          return;
+        });
+      }
+    } finally {
+      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+      localStorage.removeItem(DOCUMENTS_STORAGE_KEY);
+      localStorage.removeItem(ACTIVE_DOCUMENT_ID_STORAGE_KEY);
+      localStorage.setItem(FIRST_ACCESS_WELCOME_KEY, "1");
+      setAuthToken(null);
+      setAuthenticatedUser(null);
+      setIsLogoutSubmitting(false);
+      window.location.reload();
+    }
+  }, []);
+
   const handleSetActiveDocument = useCallback(
     (nextDocumentId: string) => {
       if (nextDocumentId === activeDocumentId) {
@@ -347,6 +711,31 @@ export default function Editor() {
       setActiveDocumentId(nextDocumentId);
     },
     [activeDocumentId, persistCurrentDocumentHtml, setActiveDocumentId],
+  );
+
+  const handleCloseDocument = useCallback(
+    async (documentId: string) => {
+      if (!authToken || !authenticatedUser || !isGuid(documentId)) {
+        handleCloseDocumentLocal(documentId);
+        return;
+      }
+
+      const deletingToastId = toast.loading("Excluindo documento...");
+
+      try {
+        await deleteDocumentWithApi(authToken, documentId);
+        handleCloseDocumentLocal(documentId);
+        toast.success("Documento excluído.", { id: deletingToastId });
+      } catch (error) {
+        const fallbackMessage = "Não foi possível excluir o documento.";
+        const message =
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : fallbackMessage;
+        toast.error(message, { id: deletingToastId });
+      }
+    },
+    [authToken, authenticatedUser, handleCloseDocumentLocal],
   );
 
   useEffect(() => {
@@ -443,6 +832,24 @@ export default function Editor() {
         onDecrease={handleDecreaseZoom}
       />
 
+      <EditorQuickMenu
+        currentUser={
+          authenticatedUser
+            ? {
+                name: authenticatedUser.name,
+                email: authenticatedUser.email,
+              }
+            : null
+        }
+        onOpenHelp={handleOpenHelpFromMenu}
+        onSave={handleSaveDocument}
+        onExport={handleExportDocument}
+        onImportMd={handleOpenImportDialog}
+        onOpenGithub={handleOpenGithub}
+        onLoginRequest={handleLogin}
+        onLogoutRequest={handleLogoutRequest}
+      />
+
       <DocumentTabsBar
         documents={documents}
         activeDocumentId={activeDocumentId}
@@ -517,7 +924,7 @@ export default function Editor() {
                 ) : null}
                 {isBodyEmpty ? (
                   <p
-                    className={`text-base text-zinc-400 ${isTitleEmpty ? "mt-5" : "mt-18"}`}
+                    className={`text-base text-zinc-400 ${isTitleEmpty ? "mt-5" : "mt-15"}`}
                   >
                     {BODY_PLACEHOLDER}
                   </p>
@@ -611,6 +1018,32 @@ export default function Editor() {
           <EditorHelpDialog
             open={isHelpDialogOpen}
             onOpenChange={setIsHelpDialogOpen}
+          />
+
+          <EditorLoginDialog
+            open={isLoginDialogOpen}
+            onOpenChange={(open) => {
+              setIsLoginDialogOpen(open);
+              if (!open) {
+                setLoginErrorMessage("");
+              }
+            }}
+            onContinueLogin={handleContinueLogin}
+            isSubmitting={isLoginSubmitting}
+            errorMessage={loginErrorMessage}
+          />
+
+          <EditorLogoutDialog
+            open={isLogoutDialogOpen}
+            isSubmitting={isLogoutSubmitting}
+            onOpenChange={setIsLogoutDialogOpen}
+            onConfirmLogout={handleConfirmLogout}
+          />
+
+          <EditorImportDialog
+            open={isImportDialogOpen}
+            onOpenChange={setIsImportDialogOpen}
+            onImportMarkdown={handleImportMarkdownDocument}
           />
         </div>
       </div>

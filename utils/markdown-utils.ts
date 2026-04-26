@@ -10,12 +10,75 @@ const turndownService = new TurndownService({
   emDelimiter: "*",
 });
 
+const normalizeTableCellText = (value: string) =>
+  value.replace(/\s+/g, " ").trim().replace(/\|/g, "\\|");
+
+const toMarkdownTable = (table: HTMLTableElement) => {
+  const headRows = table.tHead ? Array.from(table.tHead.rows) : [];
+  const bodyRows =
+    table.tBodies.length > 0
+      ? Array.from(table.tBodies).flatMap((section) => Array.from(section.rows))
+      : [];
+  const fallbackRows = Array.from(table.rows);
+  const allRows =
+    headRows.length > 0 || bodyRows.length > 0
+      ? [...headRows, ...bodyRows]
+      : fallbackRows;
+
+  if (allRows.length === 0) {
+    return "";
+  }
+
+  const hasHead = headRows.length > 0;
+  const headerRow = hasHead ? headRows[0] : allRows[0];
+  const dataRows = hasHead ? bodyRows : allRows.slice(1);
+  const columnCount = Math.max(headerRow.cells.length, 1);
+
+  const rowToCells = (row: HTMLTableRowElement) => {
+    const cells = Array.from(row.cells).map(
+      (cell) => normalizeTableCellText(cell.textContent ?? "") || " ",
+    );
+
+    while (cells.length < columnCount) {
+      cells.push(" ");
+    }
+
+    return cells.slice(0, columnCount);
+  };
+
+  const headerCells = rowToCells(headerRow);
+  const headerLine = `| ${headerCells.join(" | ")} |`;
+  const separatorLine = `| ${Array.from({ length: columnCount }, () => "---").join(" | ")} |`;
+  const bodyLines = dataRows.map((row) => `| ${rowToCells(row).join(" | ")} |`);
+
+  return [headerLine, separatorLine, ...bodyLines].join("\n");
+};
+
 turndownService.addRule("strikethrough", {
   filter(node) {
     return ["DEL", "S", "STRIKE"].includes(node.nodeName);
   },
   replacement(content: string) {
     return `~~${content}~~`;
+  },
+});
+
+turndownService.addRule("table", {
+  filter(node) {
+    return node.nodeName === "TABLE";
+  },
+  replacement(_content, node) {
+    if (!(node instanceof HTMLTableElement)) {
+      return "\n\n";
+    }
+
+    const markdownTable = toMarkdownTable(node);
+
+    if (!markdownTable) {
+      return "\n\n";
+    }
+
+    return `\n\n${markdownTable}\n\n`;
   },
 });
 

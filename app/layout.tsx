@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Toaster from "@/components/ui/sonner";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,7 +10,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Calcify",
-  description: "O bloco de notas que pensa por você: cálculos automáticos, conversões e organização inteligente em tempo real.",
+  description:
+    "O bloco de notas que pensa por você: cálculos automáticos, conversões e organização inteligente em tempo real.",
 };
 
 export default function RootLayout({
@@ -19,7 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

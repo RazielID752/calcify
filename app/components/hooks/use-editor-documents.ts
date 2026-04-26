@@ -345,6 +345,7 @@ export const useEditorDocuments = () => {
   return {
     documents,
     setDocuments,
+    hadStoredDocuments,
     activeDocumentId,
     setActiveDocumentId,
     isCreateDialogOpen,

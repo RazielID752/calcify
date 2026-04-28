@@ -45,6 +45,10 @@ type SpellcheckServerIssue = {
   word: string;
 };
 
+type SpellcheckServerResponse = {
+  issues?: SpellcheckServerIssue[];
+};
+
 const SPELLCHECK_HIGHLIGHT_NAME = "calcify-spelling-error";
 const SPELLCHECK_HIGHLIGHT_STYLE_ID = "calcify-spelling-error-style";
 const WORD_REGEX = /[\p{L}À-ÿ]+(?:[~´`^¨][\p{L}À-ÿ]+)*/gu;
@@ -349,6 +353,77 @@ const getSuggestionsForWord = (
   return Array.from(new Set(allSuggestions)).slice(0, 3);
 };
 
+const normalizeServerSuggestions = (issues: SpellcheckServerIssue[] = []) =>
+  Object.fromEntries(
+    issues.map((issue) => [
+      normalizeWord(issue.word),
+      Array.from(new Set((issue.suggestions ?? []).map(normalizeWord))).slice(
+        0,
+        3,
+      ),
+    ]),
+  );
+
+const fetchSpellcheckSuggestions = async (
+  words: string[],
+  signal?: AbortSignal,
+) => {
+  const response = await fetch("/api/spellcheck/check", {
+    body: JSON.stringify({ words }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+    signal,
+  });
+
+  if (!response.ok) {
+    return {};
+  }
+
+  const result = (await response
+    .json()
+    .catch(() => null)) as SpellcheckServerResponse | null;
+
+  return normalizeServerSuggestions(result?.issues);
+};
+
+const saveCustomDictionaryWord = async (
+  wrongWord: string,
+  correction: string,
+) => {
+  const response = await fetch("/api/spellcheck/dictionary", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      wrongWord,
+      correction,
+    }),
+  });
+  const result = (await response.json().catch(() => null)) as {
+    correction?: string;
+    message?: string;
+    wrongWord?: string;
+  } | null;
+
+  if (!response.ok) {
+    const message =
+      result &&
+      typeof result.message === "string" &&
+      result.message.trim().length > 0
+        ? result.message
+        : "Não foi possível salvar no dicionário.";
+    return { message, ok: false as const };
+  }
+
+  return {
+    correction: normalizeWord(result?.correction ?? correction),
+    ok: true as const,
+  };
+};
+
 const collectWordsForServerSpellcheck = (
   editor: HTMLDivElement,
   ignoredWords: Set<string>,
@@ -544,11 +619,6 @@ export const useEditorSpellcheck = ({
   );
 
   useEffect(() => {
-    setCustomCorrection(activeIssue?.suggestions[0] ?? "");
-    setCustomRuleMessage("");
-  }, [activeIssue]);
-
-  useEffect(() => {
     const editor = editorRef.current;
 
     if (!editor) {
@@ -569,32 +639,8 @@ export const useEditorSpellcheck = ({
       }
 
       try {
-        const response = await fetch("/api/spellcheck/check", {
-          body: JSON.stringify({ words }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-          signal: abortController.signal,
-        });
-
-        if (!response.ok) {
-          return;
-        }
-
-        const result = (await response.json().catch(() => null)) as {
-          issues?: SpellcheckServerIssue[];
-        } | null;
-
         setServerSuggestions(
-          Object.fromEntries(
-            (result?.issues ?? []).map((issue) => [
-              normalizeWord(issue.word),
-              Array.from(
-                new Set((issue.suggestions ?? []).map(normalizeWord)),
-              ).slice(0, 3),
-            ]),
-          ),
+          await fetchSpellcheckSuggestions(words, abortController.signal),
         );
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -670,7 +716,7 @@ export const useEditorSpellcheck = ({
   }, [highlightRevision, refreshKey, scheduleSpellcheck]);
 
   const handleSpellcheckClick = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
+    async (event: MouseEvent<HTMLDivElement>) => {
       const editor = editorRef.current;
 
       if (!editor) {
@@ -691,7 +737,8 @@ export const useEditorSpellcheck = ({
         return;
       }
 
-      const suggestion = getSuggestionForWord(
+      const normalizedWord = normalizeWord(wordRange.word);
+      let suggestion = getSuggestionForWord(
         wordRange.word,
         ignoredWordsRef.current,
         dictionary,
@@ -699,20 +746,62 @@ export const useEditorSpellcheck = ({
         serverSuggestionMap,
       );
 
-      if (suggestion === null) {
+      const rect = wordRange.range.getBoundingClientRect();
+      let suggestions = getSuggestionsForWord(
+        wordRange.word,
+        ignoredWordsRef.current,
+        dictionary,
+        spellcheckIndex,
+        serverSuggestionMap,
+      );
+      let shouldOpenPopover =
+        suggestion !== null || serverSuggestionMap.has(normalizedWord);
+
+      if (!shouldOpenPopover && !Object.hasOwn(dictionary, normalizedWord)) {
+        try {
+          const nextServerSuggestions = await fetchSpellcheckSuggestions([
+            normalizedWord,
+          ]);
+          const nextWordSuggestions = nextServerSuggestions[normalizedWord];
+
+          if (nextWordSuggestions) {
+            const mergedServerSuggestions = {
+              ...serverSuggestions,
+              ...nextServerSuggestions,
+            };
+            const nextServerSuggestionMap = new Map(
+              Object.entries(mergedServerSuggestions),
+            );
+
+            setServerSuggestions(mergedServerSuggestions);
+            suggestion = getSuggestionForWord(
+              wordRange.word,
+              ignoredWordsRef.current,
+              dictionary,
+              spellcheckIndex,
+              nextServerSuggestionMap,
+            );
+            suggestions = getSuggestionsForWord(
+              wordRange.word,
+              ignoredWordsRef.current,
+              dictionary,
+              spellcheckIndex,
+              nextServerSuggestionMap,
+            );
+            shouldOpenPopover = suggestion !== null;
+          }
+        } catch {
+          // Se a rota ainda nao estiver publicada, apenas fecha o popover.
+        }
+      }
+
+      if (!shouldOpenPopover) {
         setActiveIssue(null);
         return;
       }
 
-      const rect = wordRange.range.getBoundingClientRect();
-      const suggestions = getSuggestionsForWord(
-        wordRange.word,
-        ignoredWordsRef.current,
-        dictionary,
-        spellcheckIndex,
-        serverSuggestionMap,
-      );
-
+      setCustomCorrection(suggestions[0] ?? "");
+      setCustomRuleMessage("");
       setActiveIssue({
         original: wordRange.word,
         range: wordRange.range,
@@ -720,7 +809,13 @@ export const useEditorSpellcheck = ({
         suggestions,
       });
     },
-    [dictionary, editorRef, serverSuggestionMap, spellcheckIndex],
+    [
+      dictionary,
+      editorRef,
+      serverSuggestionMap,
+      serverSuggestions,
+      spellcheckIndex,
+    ],
   );
 
   const handleIgnoreIssue = useCallback(() => {
@@ -768,7 +863,7 @@ export const useEditorSpellcheck = ({
     [activeIssue, onEditorChange],
   );
 
-  const handleSaveCustomRule = useCallback(async () => {
+  const handleSaveCustomRule = useCallback(() => {
     if (!activeIssue) {
       return;
     }
@@ -783,55 +878,39 @@ export const useEditorSpellcheck = ({
     setIsSavingCustomRule(true);
     setCustomRuleMessage("");
 
-    try {
-      const response = await fetch("/api/spellcheck/dictionary", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          wrongWord: activeIssue.original,
-          correction,
-        }),
-      });
-      const result = (await response.json().catch(() => null)) as {
-        correction?: string;
-        message?: string;
-        wrongWord?: string;
-      } | null;
+    void saveCustomDictionaryWord(activeIssue.original, correction)
+      .then((result) => {
+        if (!result.ok) {
+          setCustomRuleMessage(result.message);
+          setIsSavingCustomRule(false);
+          return;
+        }
 
-      if (!response.ok) {
-        throw new Error(
-          result?.message || "Não foi possível salvar no dicionário.",
+        setCustomWords((currentWords) =>
+          currentWords.includes(result.correction)
+            ? currentWords
+            : [...currentWords, result.correction],
         );
-      }
-
-      const savedCorrection = normalizeWord(result?.correction ?? correction);
-
-      setCustomWords((currentWords) =>
-        currentWords.includes(savedCorrection)
-          ? currentWords
-          : [...currentWords, savedCorrection],
-      );
-      setActiveIssue((currentIssue) =>
-        currentIssue
-          ? {
-              ...currentIssue,
-              suggestions: [savedCorrection],
-            }
-          : currentIssue,
-      );
-      setCustomRuleMessage("Palavra correta adicionada à base local.");
-      setHighlightRevision((currentRevision) => currentRevision + 1);
-    } catch (error) {
-      const message =
-        error instanceof Error && error.message.trim().length > 0
-          ? error.message
-          : "Não foi possível salvar no dicionário.";
-      setCustomRuleMessage(message);
-    } finally {
-      setIsSavingCustomRule(false);
-    }
+        setActiveIssue((currentIssue) =>
+          currentIssue
+            ? {
+                ...currentIssue,
+                suggestions: [result.correction],
+              }
+            : currentIssue,
+        );
+        setCustomRuleMessage("Palavra correta adicionada à base local.");
+        setHighlightRevision((currentRevision) => currentRevision + 1);
+        setIsSavingCustomRule(false);
+      })
+      .catch((error) => {
+        const message =
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : "Não foi possível salvar no dicionário.";
+        setCustomRuleMessage(message);
+        setIsSavingCustomRule(false);
+      });
   }, [activeIssue, customCorrection]);
 
   const popover = useMemo(() => {
@@ -911,7 +990,7 @@ export const useEditorSpellcheck = ({
             <button
               type="button"
               disabled={isSavingCustomRule}
-              className="h-8 rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400"
+              className="h-8 rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-emerald-100 disabled:text-emerald-950"
               onClick={handleSaveCustomRule}
             >
               {isSavingCustomRule ? "Salvando" : "Adicionar"}

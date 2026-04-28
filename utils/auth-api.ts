@@ -299,7 +299,8 @@ export async function upsertDocumentWithApi(
   payload: UpsertDocumentPayload,
   options?: UpsertDocumentOptions,
 ) {
-  const shouldTryUpdate = GUID_REGEX.test(documentId);
+  const shouldTryUpdate =
+    GUID_REGEX.test(documentId) && Boolean(options?.knownUpdatedAt);
 
   if (shouldTryUpdate) {
     const headers: Record<string, string> = {

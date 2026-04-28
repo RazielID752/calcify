@@ -9,7 +9,7 @@
     "start": "next start",
     "dev:desktop": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:3000 && cross-env ELECTRON_START_URL=http://localhost:3000 electron .\"",
     "start:desktop": "cross-env NODE_ENV=production electron .",
-    "build:desktop": "pnpm build && electron-builder",
+    "build:desktop": "cross-env NEXT_OUTPUT_EXPORT=1 pnpm build && electron-builder",
     "lint": "biome check",
     "format": "biome format --write"
   },

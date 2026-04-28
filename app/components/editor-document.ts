@@ -113,8 +113,10 @@ export const getAutoTitleFromContent = (content: string) => {
 };
 
 const createDocumentId = () =>
-  globalThis.crypto?.randomUUID?.() ??
-  `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  `local-${
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  }`;
 
 export const createBlankDocument = (
   initialTitle = "",

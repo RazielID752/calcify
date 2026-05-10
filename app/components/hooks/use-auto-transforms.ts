@@ -74,6 +74,16 @@ const isLineBreakInput = (event: React.FormEvent<HTMLDivElement>) => {
   );
 };
 
+const isTextInsertInput = (event: React.FormEvent<HTMLDivElement>) => {
+  const nativeEvent = event.nativeEvent;
+
+  if (!(nativeEvent instanceof InputEvent)) {
+    return false;
+  }
+
+  return nativeEvent.inputType === "insertText";
+};
+
 const isTypographicTriggerInput = (event: React.FormEvent<HTMLDivElement>) => {
   const nativeEvent = event.nativeEvent;
 
@@ -447,7 +457,7 @@ export function useAutoTransforms({
       return false;
     }
 
-    if (isLineBreakInput(event)) {
+    if (!isTextInsertInput(event)) {
       return false;
     }
 

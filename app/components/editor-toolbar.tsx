@@ -7,6 +7,7 @@ import {
   Bold,
   CircleHelp,
   Code,
+  Eraser,
   Highlighter,
   ImagePlus,
   Italic,
@@ -59,6 +60,7 @@ type EditorToolbarProps = {
   };
   onUndo: () => void;
   onRedo: () => void;
+  onResetFormatting: () => void;
   onHeadingChange: (level: HeadingLevel) => void;
   onBulletList: () => void;
   onOrderedList: () => void;
@@ -113,6 +115,7 @@ export default function EditorToolbar({
   activeState,
   onUndo,
   onRedo,
+  onResetFormatting,
   onHeadingChange,
   onBulletList,
   onOrderedList,
@@ -173,6 +176,16 @@ export default function EditorToolbar({
                 onClick={onRedo}
               >
                 <Redo2 />
+              </ToolbarActionButton>
+              <ToolbarActionButton
+                tooltip="Redefinir formato"
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onMouseDown={stopFocusLoss}
+                onClick={onResetFormatting}
+              >
+                <Eraser />
               </ToolbarActionButton>
 
               <Select
@@ -392,7 +405,7 @@ export default function EditorToolbar({
               >
                 <ImagePlus />
               </ToolbarActionButton>
-              <Button
+              {/* <Button
                 type="button"
                 variant="outline"
                 size="sm"
@@ -402,7 +415,7 @@ export default function EditorToolbar({
               >
                 <CircleHelp className="size-4" />
                 Ajuda
-              </Button>
+              </Button> */}
             </div>
 
             <div className="hidden h-7 w-px bg-zinc-200 sm:block" />

@@ -294,15 +294,12 @@ export function useEditorContentHandlers({
       }
 
       const range = selection.getRangeAt(0);
-      const caretInsideResult =
-        resultNode.contains(range.startContainer) ||
-        resultNode === range.startContainer;
       const atEndOfBlock =
         range.collapsed &&
         range.endContainer === block &&
         range.endOffset === block.childNodes.length;
 
-      if (!caretInsideResult && !atEndOfBlock) {
+      if (!atEndOfBlock) {
         return false;
       }
 

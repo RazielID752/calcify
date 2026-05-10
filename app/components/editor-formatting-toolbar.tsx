@@ -50,6 +50,9 @@ export default function EditorFormattingToolbar({
       activeState={activeState}
       onUndo={() => run((context) => editorCommands.undo(context))}
       onRedo={() => run((context) => editorCommands.redo(context))}
+      onResetFormatting={() =>
+        run((context) => editorCommands.resetFormatting(context))
+      }
       onHeadingChange={onHeadingChange}
       onBulletList={() => onList("bullet")}
       onOrderedList={() => onList("ordered")}

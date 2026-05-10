@@ -414,6 +414,14 @@ const deleteNodeWithHistory = (target: HTMLElement) => {
   document.execCommand("delete", false);
 };
 
+const formatSelectionAsParagraph = () => {
+  for (const option of ["P", "p", "<p>"]) {
+    if (document.execCommand("formatBlock", false, option)) {
+      return;
+    }
+  }
+};
+
 export const editorCommands = {
   undo(context: EditorContext) {
     runExecCommand(context, "undo");
@@ -436,6 +444,22 @@ export const editorCommands = {
     }
 
     document.execCommand("formatBlock", false, "p");
+  },
+  resetFormatting(context: EditorContext) {
+    restoreSelection(context);
+
+    if (document.queryCommandState("insertUnorderedList")) {
+      document.execCommand("insertUnorderedList", false);
+    }
+
+    if (document.queryCommandState("insertOrderedList")) {
+      document.execCommand("insertOrderedList", false);
+    }
+
+    document.execCommand("removeFormat", false);
+    document.execCommand("unlink", false);
+    formatSelectionAsParagraph();
+    document.execCommand("justifyLeft", false);
   },
   list(context: EditorContext, type: ListType) {
     runExecCommand(

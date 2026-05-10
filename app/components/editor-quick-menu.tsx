@@ -5,6 +5,7 @@ import {
   Download,
   Files,
   GitBranch,
+  Globe2,
   LogIn,
   LogOut,
   Menu,
@@ -12,6 +13,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -108,6 +110,17 @@ export default function EditorQuickMenu({
           >
             <Files className="size-4" />
             Ver documentos
+          </Button>
+
+          <Button
+            asChild
+            variant="ghost"
+            className="w-full justify-start gap-2 text-zinc-700 hover:bg-zinc-100"
+          >
+            <Link href="/site" onClick={() => setIsOpen(false)}>
+              <Globe2 className="size-4" />
+              Ir para o site
+            </Link>
           </Button>
 
           <Button

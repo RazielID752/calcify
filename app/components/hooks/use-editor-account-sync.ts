@@ -57,6 +57,38 @@ type UseEditorAccountSyncOptions = {
   persistCurrentDocumentHtml: () => void;
 };
 
+const normalizeDocumentTitle = (title: string) =>
+  title.trim() || DEFAULT_DOCUMENT_TITLE;
+
+const getDocumentFingerprint = (
+  documentItem: Pick<Document, "content" | "title">,
+) =>
+  `${normalizeDocumentTitle(documentItem.title)}\n${documentItem.content ?? ""}`;
+
+const getMostRecentApiDocuments = (
+  items: Awaited<ReturnType<typeof fetchDocumentsWithApi>>,
+) => {
+  const latestDocumentByFingerprint = new Map<string, (typeof items)[number]>();
+
+  for (const item of items) {
+    const fingerprint = getDocumentFingerprint({
+      title: item.title,
+      content: item.content,
+    });
+    const existingItem = latestDocumentByFingerprint.get(fingerprint);
+
+    if (
+      !existingItem ||
+      new Date(item.updatedAt).getTime() >
+        new Date(existingItem.updatedAt).getTime()
+    ) {
+      latestDocumentByFingerprint.set(fingerprint, item);
+    }
+  }
+
+  return Array.from(latestDocumentByFingerprint.values());
+};
+
 export const useEditorAccountSync = ({
   documents,
   setDocuments,
@@ -147,7 +179,7 @@ export const useEditorAccountSync = ({
           token,
           currentDocument.id,
           {
-            title: currentDocument.title?.trim() || DEFAULT_DOCUMENT_TITLE,
+            title: normalizeDocumentTitle(currentDocument.title),
             content: currentDocument.content ?? "",
             isDraft: options?.isDraft ?? false,
           },
@@ -157,20 +189,65 @@ export const useEditorAccountSync = ({
           },
         );
 
-        setDocuments((previousDocuments) =>
-          previousDocuments.map((documentItem) => {
-            if (documentItem.id !== currentDocument.id) {
-              return documentItem;
-            }
+        setDocuments((previousDocuments) => {
+          const savedDocumentFingerprint = getDocumentFingerprint({
+            title: savedDocument.title,
+            content: savedDocument.content,
+          });
+          let didApplySavedDocument = false;
 
-            return {
-              ...documentItem,
-              id: savedDocument.id,
-              title: savedDocument.title?.trim() || DEFAULT_DOCUMENT_TITLE,
-              content: savedDocument.content ?? "",
-            };
-          }),
-        );
+          return previousDocuments
+            .map((documentItem) => {
+              if (documentItem.id === savedDocument.id) {
+                if (didApplySavedDocument) {
+                  return null;
+                }
+
+                didApplySavedDocument = true;
+
+                return {
+                  ...documentItem,
+                  title: normalizeDocumentTitle(savedDocument.title),
+                  content: savedDocument.content ?? "",
+                  titleMode: "manual" as const,
+                };
+              }
+
+              if (documentItem.id !== currentDocument.id) {
+                return documentItem;
+              }
+
+              if (didApplySavedDocument) {
+                return null;
+              }
+
+              didApplySavedDocument = true;
+
+              return {
+                ...documentItem,
+                id: savedDocument.id,
+                title: normalizeDocumentTitle(savedDocument.title),
+                content: savedDocument.content ?? "",
+                titleMode: "manual" as const,
+              };
+            })
+            .filter((documentItem): documentItem is Document => {
+              if (!documentItem) {
+                return false;
+              }
+
+              if (
+                documentItem.id !== savedDocument.id &&
+                !isGuid(documentItem.id) &&
+                getDocumentFingerprint(documentItem) ===
+                  savedDocumentFingerprint
+              ) {
+                return false;
+              }
+
+              return true;
+            });
+        });
 
         if (savedDocument.id !== currentDocument.id) {
           if (activeDocumentIdRef.current === currentDocument.id) {
@@ -331,16 +408,17 @@ export const useEditorAccountSync = ({
           return;
         }
 
-        const apiDocuments = items.map((item) => ({
+        const latestApiItems = getMostRecentApiDocuments(items);
+        const apiDocuments = latestApiItems.map((item) => ({
           id: item.id,
-          title: item.title?.trim() || DEFAULT_DOCUMENT_TITLE,
+          title: normalizeDocumentTitle(item.title),
           content: item.content ?? "",
           createdAt: new Date(item.createdAt),
           titleMode: "manual" as const,
         }));
 
         serverUpdatedAtByDocumentIdRef.current = Object.fromEntries(
-          items.map((item) => [item.id, item.updatedAt]),
+          latestApiItems.map((item) => [item.id, item.updatedAt]),
         );
 
         if (!hadStoredDocuments) {
@@ -353,15 +431,82 @@ export const useEditorAccountSync = ({
           const existingIds = new Set(
             previousDocuments.map((documentItem) => documentItem.id),
           );
-          const missingApiDocuments = apiDocuments.filter(
-            (documentItem) => !existingIds.has(documentItem.id),
-          );
+          const existingLocalDocumentByFingerprint = new Map<
+            string,
+            Document
+          >();
 
-          if (missingApiDocuments.length === 0) {
-            return previousDocuments;
+          for (const documentItem of previousDocuments) {
+            if (isGuid(documentItem.id)) {
+              continue;
+            }
+
+            existingLocalDocumentByFingerprint.set(
+              getDocumentFingerprint(documentItem),
+              documentItem,
+            );
           }
 
-          return [...previousDocuments, ...missingApiDocuments];
+          const localIdReplacementById = new Map<string, string>();
+
+          const missingApiDocuments = apiDocuments.filter((documentItem) => {
+            if (existingIds.has(documentItem.id)) {
+              return false;
+            }
+
+            const matchingLocalDocument =
+              existingLocalDocumentByFingerprint.get(
+                getDocumentFingerprint(documentItem),
+              );
+
+            if (!matchingLocalDocument) {
+              return true;
+            }
+
+            localIdReplacementById.set(
+              matchingLocalDocument.id,
+              documentItem.id,
+            );
+            return false;
+          });
+
+          const mergedDocuments = previousDocuments
+            .map((documentItem) => {
+              const replacementId = localIdReplacementById.get(documentItem.id);
+
+              if (!replacementId) {
+                return documentItem;
+              }
+
+              const apiDocument = apiDocuments.find(
+                (item) => item.id === replacementId,
+              );
+
+              if (!apiDocument) {
+                return documentItem;
+              }
+
+              return apiDocument;
+            })
+            .filter(
+              (documentItem, documentIndex, mergedItems) =>
+                mergedItems.findIndex((item) => item.id === documentItem.id) ===
+                documentIndex,
+            );
+
+          const activeReplacementId = localIdReplacementById.get(
+            activeDocumentIdRef.current,
+          );
+
+          if (activeReplacementId) {
+            setActiveDocumentId(activeReplacementId);
+          }
+
+          if (missingApiDocuments.length === 0) {
+            return mergedDocuments;
+          }
+
+          return [...mergedDocuments, ...missingApiDocuments];
         });
       })
       .catch(() => {

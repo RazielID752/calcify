@@ -32,6 +32,7 @@ type UpsertDocumentPayload = {
   title: string;
   content: string;
   isDraft: boolean;
+  clientDocumentId?: string;
 };
 
 type UpsertDocumentOptions = {
@@ -299,8 +300,7 @@ export async function upsertDocumentWithApi(
   payload: UpsertDocumentPayload,
   options?: UpsertDocumentOptions,
 ) {
-  const shouldTryUpdate =
-    GUID_REGEX.test(documentId) && Boolean(options?.knownUpdatedAt);
+  const shouldTryUpdate = GUID_REGEX.test(documentId);
 
   if (shouldTryUpdate) {
     const headers: Record<string, string> = {
@@ -350,7 +350,10 @@ export async function upsertDocumentWithApi(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      clientDocumentId: GUID_REGEX.test(documentId) ? undefined : documentId,
+    }),
   });
 
   const createdData = await createResponse.json().catch(() => ({}));

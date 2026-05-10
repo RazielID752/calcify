@@ -525,16 +525,24 @@ export const useEditorAccountSync = ({
   ]);
 
   useEffect(() => {
+    const flushExistingServerDocument = () => {
+      if (!isGuid(activeDocumentIdRef.current)) {
+        return;
+      }
+
+      flushAutosave();
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
         persistCurrentDocumentHtml();
-        flushAutosave();
+        flushExistingServerDocument();
       }
     };
 
     const handleBeforeUnload = () => {
       persistCurrentDocumentHtml();
-      flushAutosave();
+      flushExistingServerDocument();
     };
 
     const handleOnline = () => {

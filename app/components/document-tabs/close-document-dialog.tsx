@@ -34,13 +34,15 @@ export default function CloseDocumentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-red-100 text-red-600">
+          <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
             <AlertTriangle className="size-5" />
           </div>
           <DialogTitle>Fechar documento</DialogTitle>
           <DialogDescription>
-            Deseja realmente fechar o documento "{documentTitle}"? Essa acao nao
-            pode ser desfeita.
+            Tem certeza que deseja fechar o documento{" "}
+            <strong className="font-bold text-black">{documentTitle}</strong>? O
+            arquivo não será apagado e poderá ser aberto novamente em "Ver
+            documentos".
           </DialogDescription>
         </DialogHeader>
 
@@ -52,7 +54,7 @@ export default function CloseDocumentDialog({
           >
             Cancelar
           </Button>
-          <Button type="button" variant="destructive" onClick={handleConfirm}>
+          <Button type="button" onClick={handleConfirm}>
             Fechar documento
           </Button>
         </DialogFooter>

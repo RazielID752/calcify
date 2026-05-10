@@ -2,7 +2,9 @@ export type Document = {
   id: string;
   title: string;
   content: string;
+  clientDocumentId?: string | null;
   createdAt: Date;
+  serverUpdatedAt?: string;
   titleMode: "auto" | "manual";
 };
 
@@ -112,7 +114,7 @@ export const getAutoTitleFromContent = (content: string) => {
   return shortenTitle(headingText);
 };
 
-const createDocumentId = () =>
+export const createDocumentId = () =>
   `local-${
     globalThis.crypto?.randomUUID?.() ??
     `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`

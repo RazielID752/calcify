@@ -3,6 +3,7 @@
 import {
   CircleHelp,
   Download,
+  Files,
   GitBranch,
   LogIn,
   LogOut,
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 type EditorQuickMenuProps = {
   currentUser: { name: string; email: string } | null;
   onOpenHelp: () => void;
+  onOpenDocuments: () => void;
   onSave: () => void;
   onExport: () => void;
   onImportMd: () => void;
@@ -28,6 +30,7 @@ type EditorQuickMenuProps = {
 export default function EditorQuickMenu({
   currentUser,
   onOpenHelp,
+  onOpenDocuments,
   onSave,
   onExport,
   onImportMd,
@@ -95,6 +98,16 @@ export default function EditorQuickMenu({
           >
             <CircleHelp className="size-4" />
             Abrir instruções
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-start gap-2 text-zinc-700 hover:bg-zinc-100"
+            onClick={() => handleMenuAction(onOpenDocuments)}
+          >
+            <Files className="size-4" />
+            Ver documentos
           </Button>
 
           <Button

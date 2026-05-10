@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import DocumentLibraryDialog from "./document-library-dialog";
 import DocumentTabsBar from "./document-tabs-bar";
 import {
   type AlignType,
@@ -10,7 +11,7 @@ import {
   mathOptions,
 } from "./editor-commands";
 import EditorDialogsStack from "./editor-dialogs-stack";
-import { DEFAULT_DOCUMENT_TITLE } from "./editor-document";
+import { DEFAULT_DOCUMENT_TITLE, type Document } from "./editor-document";
 import EditorFormattingToolbar from "./editor-formatting-toolbar";
 import EditorQuickMenu from "./editor-quick-menu";
 import EditorWritingSurface from "./editor-writing-surface";
@@ -60,6 +61,7 @@ export default function Editor() {
   });
 
   const [zoom, setZoom] = useState(100);
+  const [isDocumentLibraryOpen, setIsDocumentLibraryOpen] = useState(false);
   const { handleOpenHelpFromMenu, isHelpDialogOpen, setIsHelpDialogOpen } =
     useEditorHelpDialog();
 
@@ -102,8 +104,8 @@ export default function Editor() {
 
   const {
     authenticatedUser,
+    authToken,
     flushAutosave,
-    handleCloseDocument,
     handleConfirmLogout,
     handleContinueLogin,
     handleLogin,
@@ -291,6 +293,52 @@ export default function Editor() {
     ],
   );
 
+  const handleOpenLibraryDocument = useCallback(
+    (documentItem: Document) => {
+      if (documents.some((item) => item.id === documentItem.id)) {
+        return;
+      }
+
+      persistCurrentDocumentHtml();
+      flushAutosave(activeDocumentId);
+      setDocuments((previousDocuments) => {
+        if (
+          previousDocuments.some(
+            (previousDocument) => previousDocument.id === documentItem.id,
+          )
+        ) {
+          return previousDocuments;
+        }
+
+        return [
+          ...previousDocuments,
+          {
+            ...documentItem,
+            titleMode: "manual",
+          },
+        ];
+      });
+      setActiveDocumentId(documentItem.id);
+    },
+    [
+      activeDocumentId,
+      documents,
+      flushAutosave,
+      persistCurrentDocumentHtml,
+      setActiveDocumentId,
+      setDocuments,
+    ],
+  );
+
+  const handleCloseTabDocument = useCallback(
+    (documentId: string) => {
+      persistCurrentDocumentHtml();
+      flushAutosave(documentId);
+      handleCloseDocumentLocal(documentId);
+    },
+    [flushAutosave, handleCloseDocumentLocal, persistCurrentDocumentHtml],
+  );
+
   const handleIncreaseZoom = () => {
     setZoom((prev) => Math.min(prev + 10, 200));
   };
@@ -322,6 +370,7 @@ export default function Editor() {
             : null
         }
         onOpenHelp={handleOpenHelpFromMenu}
+        onOpenDocuments={() => setIsDocumentLibraryOpen(true)}
         onSave={handleSaveDocument}
         onExport={handleExportDocument}
         onImportMd={handleOpenImportDialog}
@@ -339,8 +388,19 @@ export default function Editor() {
         onOpenCreateDialog={handleOpenCreateDocumentDialog}
         onCreateDocument={handleCreateDocument}
         onRenameDocument={handleRenameDocument}
-        onCloseDocument={handleCloseDocument}
+        onCloseDocument={handleCloseTabDocument}
         onCreateDialogOpenChange={setIsCreateDialogOpen}
+      />
+
+      <DocumentLibraryDialog
+        authToken={authToken}
+        defaultDocumentTitle={DEFAULT_DOCUMENT_TITLE}
+        documents={documents}
+        open={isDocumentLibraryOpen}
+        onDeleteOpenDocument={handleCloseDocumentLocal}
+        onOpenChange={setIsDocumentLibraryOpen}
+        onOpenDocument={handleOpenLibraryDocument}
+        onRenameDocument={handleRenameDocument}
       />
 
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">

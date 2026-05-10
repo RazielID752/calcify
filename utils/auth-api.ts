@@ -14,18 +14,21 @@ type LoginApiResponse = {
   };
 };
 
+export type DocumentApiResponse = {
+  id: string;
+  title: string;
+  content: string;
+  clientDocumentId?: string | null;
+  isDraft: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type DocumentListApiResponse = {
   page: number;
   pageSize: number;
   total: number;
-  items: Array<{
-    id: string;
-    title: string;
-    content: string;
-    isDraft: boolean;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+  items: DocumentApiResponse[];
 };
 
 type UpsertDocumentPayload = {
@@ -37,15 +40,6 @@ type UpsertDocumentPayload = {
 
 type UpsertDocumentOptions = {
   knownUpdatedAt?: string;
-};
-
-type UpsertDocumentApiResponse = {
-  id: string;
-  title: string;
-  content: string;
-  isDraft: boolean;
-  createdAt: string;
-  updatedAt: string;
 };
 
 type SpellcheckRulePayload = {
@@ -80,7 +74,7 @@ const readField = <T>(
 
 const normalizeDocumentResponse = (
   value: unknown,
-): UpsertDocumentApiResponse | null => {
+): DocumentApiResponse | null => {
   if (!value || typeof value !== "object") {
     return null;
   }
@@ -89,6 +83,9 @@ const normalizeDocumentResponse = (
   const id = readField<string>(record, "id", "Id");
   const title = readField<string>(record, "title", "Title");
   const content = readField<string>(record, "content", "Content");
+  const clientDocumentId =
+    readField<string | null>(record, "clientDocumentId", "ClientDocumentId") ??
+    null;
   const isDraft = readField<boolean>(record, "isDraft", "IsDraft") ?? false;
   const createdAt =
     readField<string>(record, "createdAt", "CreatedAt") ??
@@ -109,6 +106,7 @@ const normalizeDocumentResponse = (
     id,
     title,
     content,
+    clientDocumentId,
     isDraft,
     createdAt,
     updatedAt,
@@ -204,12 +202,32 @@ export async function logoutWithApi(token: string) {
   }
 }
 
-export async function fetchDocumentsWithApi(token: string) {
-  const response = await fetch(`${resolveApiBaseUrl()}/api/documents`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+export async function fetchDocumentsWithApi(
+  token: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    sort?: "createdAt" | "updatedAt";
+  },
+) {
+  const searchParams = new URLSearchParams();
+  searchParams.set("page", `${options?.page ?? 1}`);
+  searchParams.set("pageSize", `${options?.pageSize ?? 10}`);
+  searchParams.set("sort", options?.sort ?? "updatedAt");
+
+  if (options?.search?.trim()) {
+    searchParams.set("search", options.search.trim());
+  }
+
+  const response = await fetch(
+    `${resolveApiBaseUrl()}/api/documents?${searchParams.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   const data = (await response.json().catch(() => ({}))) as
     | Partial<DocumentListApiResponse>
@@ -226,12 +244,61 @@ export async function fetchDocumentsWithApi(token: string) {
   const rawItems = (payload.items ?? payload.Items) as unknown;
 
   if (!Array.isArray(rawItems)) {
-    return [];
+    return {
+      items: [],
+      page: options?.page ?? 1,
+      pageSize: options?.pageSize ?? 10,
+      total: 0,
+    };
   }
 
-  return rawItems
+  const normalizedItems = rawItems
     .map(normalizeDocumentResponse)
-    .filter((item): item is UpsertDocumentApiResponse => item !== null);
+    .filter((item): item is DocumentApiResponse => item !== null);
+
+  return {
+    items: normalizedItems,
+    page:
+      typeof payload.page === "number" ? payload.page : (options?.page ?? 1),
+    pageSize:
+      typeof payload.pageSize === "number"
+        ? payload.pageSize
+        : (options?.pageSize ?? 10),
+    total:
+      typeof payload.total === "number"
+        ? payload.total
+        : normalizedItems.length,
+  };
+}
+
+export async function fetchDocumentWithApi(token: string, documentId: string) {
+  const response = await fetch(
+    `${resolveApiBaseUrl()}/api/documents/${documentId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      (data as { message?: string; Message?: string }).message ??
+        (data as { message?: string; Message?: string }).Message ??
+        "Não foi possível carregar o documento.",
+      response.status,
+    );
+  }
+
+  const normalizedData = normalizeDocumentResponse(data);
+
+  if (!normalizedData) {
+    throw new Error("Resposta de documento inválida.");
+  }
+
+  return normalizedData;
 }
 
 export async function fetchSpellcheckRulesWithApi(token: string) {
@@ -342,6 +409,15 @@ export async function upsertDocumentWithApi(
         updateResponse.status,
       );
     }
+
+    const data = (await updateResponse.json().catch(() => ({}))) as {
+      message?: string;
+      Message?: string;
+    };
+    throw new ApiRequestError(
+      data.message ?? data.Message ?? "Documento não encontrado.",
+      updateResponse.status,
+    );
   }
 
   const createResponse = await fetch(`${resolveApiBaseUrl()}/api/documents`, {
@@ -352,7 +428,9 @@ export async function upsertDocumentWithApi(
     },
     body: JSON.stringify({
       ...payload,
-      clientDocumentId: GUID_REGEX.test(documentId) ? undefined : documentId,
+      clientDocumentId:
+        payload.clientDocumentId ??
+        (GUID_REGEX.test(documentId) ? undefined : documentId),
     }),
   });
 
@@ -374,6 +452,43 @@ export async function upsertDocumentWithApi(
   }
 
   return normalizedCreatedData;
+}
+
+export async function updateDocumentTitleWithApi(
+  token: string,
+  documentId: string,
+  title: string,
+) {
+  const response = await fetch(
+    `${resolveApiBaseUrl()}/api/documents/${documentId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ title }),
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      (data as { message?: string; Message?: string }).message ??
+        (data as { message?: string; Message?: string }).Message ??
+        "Não foi possível editar o título do documento.",
+      response.status,
+    );
+  }
+
+  const normalizedData = normalizeDocumentResponse(data);
+
+  if (!normalizedData) {
+    throw new Error("Resposta de atualização de documento inválida.");
+  }
+
+  return normalizedData;
 }
 
 export function isGuid(value: string) {

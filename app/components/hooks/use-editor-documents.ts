@@ -18,7 +18,9 @@ type StoredDocument = {
   id: string;
   title: string;
   content: string;
+  clientDocumentId?: string | null;
   createdAt: string;
+  serverUpdatedAt?: string;
   titleMode: "auto" | "manual";
 };
 
@@ -48,9 +50,11 @@ const toDocument = (storedDocument: StoredDocument): Document => {
     id: storedDocument.id,
     title: storedDocument.title,
     content: storedDocument.content,
+    clientDocumentId: storedDocument.clientDocumentId ?? null,
     createdAt: Number.isNaN(createdAtDate.getTime())
       ? new Date()
       : createdAtDate,
+    serverUpdatedAt: storedDocument.serverUpdatedAt,
     titleMode: storedDocument.titleMode,
   };
 };
@@ -74,12 +78,21 @@ const parseStoredDocuments = (rawValue: string | null): Document[] => {
         }
 
         const candidate = item as Partial<StoredDocument>;
+        const hasValidClientDocumentId =
+          candidate.clientDocumentId === undefined ||
+          candidate.clientDocumentId === null ||
+          typeof candidate.clientDocumentId === "string";
+        const hasValidServerUpdatedAt =
+          candidate.serverUpdatedAt === undefined ||
+          typeof candidate.serverUpdatedAt === "string";
 
         return (
           typeof candidate.id === "string" &&
           typeof candidate.title === "string" &&
           typeof candidate.content === "string" &&
           typeof candidate.createdAt === "string" &&
+          hasValidClientDocumentId &&
+          hasValidServerUpdatedAt &&
           isTitleMode(candidate.titleMode)
         );
       })

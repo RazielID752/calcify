@@ -9,14 +9,17 @@ import {
 import { toast } from "sonner";
 import {
   ApiRequestError,
+  type DocumentApiResponse,
   deleteDocumentWithApi,
   fetchDocumentsWithApi,
+  fetchDocumentWithApi,
   isGuid,
   loginWithApi,
   logoutWithApi,
   upsertDocumentWithApi,
 } from "@/utils/auth-api";
 import {
+  createDocumentId,
   DEFAULT_DOCUMENT_TITLE,
   type Document,
   FIRST_ACCESS_WELCOME_KEY,
@@ -40,6 +43,7 @@ type AuthUser = {
 type SyncResult =
   | { status: "skipped" }
   | { status: "missing" }
+  | { status: "notFound"; error: ApiRequestError; localDocumentId?: string }
   | {
       status: "saved";
       savedDocument: Awaited<ReturnType<typeof upsertDocumentWithApi>>;
@@ -65,9 +69,7 @@ const getDocumentFingerprint = (
 ) =>
   `${normalizeDocumentTitle(documentItem.title)}\n${documentItem.content ?? ""}`;
 
-const getMostRecentApiDocuments = (
-  items: Awaited<ReturnType<typeof fetchDocumentsWithApi>>,
-) => {
+const getMostRecentApiDocuments = (items: DocumentApiResponse[]) => {
   const latestDocumentByFingerprint = new Map<string, (typeof items)[number]>();
 
   for (const item of items) {
@@ -122,6 +124,13 @@ export const useEditorAccountSync = ({
 
   useEffect(() => {
     documentsRef.current = documents;
+
+    for (const documentItem of documents) {
+      if (isGuid(documentItem.id) && documentItem.serverUpdatedAt) {
+        serverUpdatedAtByDocumentIdRef.current[documentItem.id] =
+          documentItem.serverUpdatedAt;
+      }
+    }
   }, [documents]);
 
   useEffect(() => {
@@ -154,6 +163,88 @@ export const useEditorAccountSync = ({
     autosaveRetryTimerRef.current = null;
   }, []);
 
+  const detachServerDocumentToLocal = useCallback(
+    (documentId: string) => {
+      if (!isGuid(documentId)) {
+        return undefined;
+      }
+
+      const localDocumentId = createDocumentId();
+      let didDetachDocument = false;
+
+      const nextDocuments = documentsRef.current.map((documentItem) => {
+        if (documentItem.id !== documentId) {
+          return documentItem;
+        }
+
+        didDetachDocument = true;
+
+        return {
+          ...documentItem,
+          id: localDocumentId,
+          clientDocumentId: documentItem.clientDocumentId ?? localDocumentId,
+          serverUpdatedAt: undefined,
+        };
+      });
+
+      if (!didDetachDocument) {
+        return undefined;
+      }
+
+      documentsRef.current = nextDocuments;
+      setDocuments(nextDocuments);
+      delete serverUpdatedAtByDocumentIdRef.current[documentId];
+
+      if (activeDocumentIdRef.current === documentId) {
+        activeDocumentIdRef.current = localDocumentId;
+        setActiveDocumentId(localDocumentId);
+      }
+
+      return localDocumentId;
+    },
+    [setActiveDocumentId, setDocuments],
+  );
+
+  const detachAllServerDocumentsToLocal = useCallback(() => {
+    const replacementIdByDocumentId = new Map<string, string>();
+    let didDetachDocument = false;
+
+    const nextDocuments = documentsRef.current.map((documentItem) => {
+      if (!isGuid(documentItem.id)) {
+        return documentItem;
+      }
+
+      didDetachDocument = true;
+      const localDocumentId =
+        replacementIdByDocumentId.get(documentItem.id) ?? createDocumentId();
+      replacementIdByDocumentId.set(documentItem.id, localDocumentId);
+
+      return {
+        ...documentItem,
+        id: localDocumentId,
+        clientDocumentId: documentItem.clientDocumentId ?? localDocumentId,
+        serverUpdatedAt: undefined,
+      };
+    });
+
+    if (!didDetachDocument) {
+      return;
+    }
+
+    documentsRef.current = nextDocuments;
+    setDocuments(nextDocuments);
+    serverUpdatedAtByDocumentIdRef.current = {};
+
+    const activeReplacementId = replacementIdByDocumentId.get(
+      activeDocumentIdRef.current,
+    );
+
+    if (activeReplacementId) {
+      activeDocumentIdRef.current = activeReplacementId;
+      setActiveDocumentId(activeReplacementId);
+    }
+  }, [setActiveDocumentId, setDocuments]);
+
   const syncDocumentWithApi = useCallback(
     async (
       documentId: string,
@@ -175,17 +266,45 @@ export const useEditorAccountSync = ({
       }
 
       try {
+        let knownUpdatedAt =
+          serverUpdatedAtByDocumentIdRef.current[currentDocument.id] ??
+          currentDocument.serverUpdatedAt;
+
+        if (isGuid(currentDocument.id) && !knownUpdatedAt) {
+          const serverDocument = await fetchDocumentWithApi(
+            token,
+            currentDocument.id,
+          );
+          knownUpdatedAt = serverDocument.updatedAt;
+          serverUpdatedAtByDocumentIdRef.current[currentDocument.id] =
+            serverDocument.updatedAt;
+
+          setDocuments((previousDocuments) =>
+            previousDocuments.map((documentItem) =>
+              documentItem.id === currentDocument.id
+                ? {
+                    ...documentItem,
+                    clientDocumentId: serverDocument.clientDocumentId ?? null,
+                    serverUpdatedAt: serverDocument.updatedAt,
+                  }
+                : documentItem,
+            ),
+          );
+        }
+
         const savedDocument = await upsertDocumentWithApi(
           token,
           currentDocument.id,
           {
             title: normalizeDocumentTitle(currentDocument.title),
             content: currentDocument.content ?? "",
+            clientDocumentId:
+              currentDocument.clientDocumentId ??
+              (!isGuid(currentDocument.id) ? currentDocument.id : undefined),
             isDraft: options?.isDraft ?? false,
           },
           {
-            knownUpdatedAt:
-              serverUpdatedAtByDocumentIdRef.current[currentDocument.id],
+            knownUpdatedAt,
           },
         );
 
@@ -207,8 +326,10 @@ export const useEditorAccountSync = ({
 
                 return {
                   ...documentItem,
+                  clientDocumentId: savedDocument.clientDocumentId ?? null,
                   title: normalizeDocumentTitle(savedDocument.title),
                   content: savedDocument.content ?? "",
+                  serverUpdatedAt: savedDocument.updatedAt,
                   titleMode: "manual" as const,
                 };
               }
@@ -226,8 +347,10 @@ export const useEditorAccountSync = ({
               return {
                 ...documentItem,
                 id: savedDocument.id,
+                clientDocumentId: savedDocument.clientDocumentId ?? null,
                 title: normalizeDocumentTitle(savedDocument.title),
                 content: savedDocument.content ?? "",
+                serverUpdatedAt: savedDocument.updatedAt,
                 titleMode: "manual" as const,
               };
             })
@@ -264,6 +387,14 @@ export const useEditorAccountSync = ({
 
         return { status: "saved", savedDocument };
       } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 404) {
+          return {
+            status: "notFound",
+            error,
+            localDocumentId: detachServerDocumentToLocal(documentId),
+          };
+        }
+
         if (error instanceof ApiRequestError && error.status === 409) {
           return { status: "conflict", error };
         }
@@ -271,7 +402,12 @@ export const useEditorAccountSync = ({
         return { status: "error", error };
       }
     },
-    [clearAutosaveRetryTimer, setActiveDocumentId, setDocuments],
+    [
+      clearAutosaveRetryTimer,
+      detachServerDocumentToLocal,
+      setActiveDocumentId,
+      setDocuments,
+    ],
   );
 
   const runAutosaveNow = useCallback(
@@ -321,6 +457,10 @@ export const useEditorAccountSync = ({
           toast.error(
             "Conflito de versão detectado. Recarregue para sincronizar a versão mais recente.",
           );
+        }
+
+        if (result.status === "notFound") {
+          clearAutosaveRetryTimer();
         }
       } finally {
         isAutosaveInFlightRef.current = false;
@@ -402,18 +542,38 @@ export const useEditorAccountSync = ({
 
     let isCancelled = false;
 
-    void fetchDocumentsWithApi(authToken)
-      .then((items) => {
-        if (isCancelled || items.length === 0) {
+    void fetchDocumentsWithApi(authToken, {
+      page: 1,
+      pageSize: 1,
+      sort: "updatedAt",
+    })
+      .then(({ items, total }) => {
+        if (isCancelled) {
+          return;
+        }
+
+        if (total === 0) {
+          serverUpdatedAtByDocumentIdRef.current = {};
+
+          if (hadStoredDocuments) {
+            detachAllServerDocumentsToLocal();
+          }
+
+          return;
+        }
+
+        if (items.length === 0) {
           return;
         }
 
         const latestApiItems = getMostRecentApiDocuments(items);
         const apiDocuments = latestApiItems.map((item) => ({
           id: item.id,
+          clientDocumentId: item.clientDocumentId ?? null,
           title: normalizeDocumentTitle(item.title),
           content: item.content ?? "",
           createdAt: new Date(item.createdAt),
+          serverUpdatedAt: item.updatedAt,
           titleMode: "manual" as const,
         }));
 
@@ -428,9 +588,6 @@ export const useEditorAccountSync = ({
         }
 
         setDocuments((previousDocuments) => {
-          const existingIds = new Set(
-            previousDocuments.map((documentItem) => documentItem.id),
-          );
           const existingLocalDocumentByFingerprint = new Map<
             string,
             Document
@@ -449,9 +606,13 @@ export const useEditorAccountSync = ({
 
           const localIdReplacementById = new Map<string, string>();
 
-          const missingApiDocuments = apiDocuments.filter((documentItem) => {
-            if (existingIds.has(documentItem.id)) {
-              return false;
+          for (const documentItem of apiDocuments) {
+            if (
+              previousDocuments.some(
+                (previousDocument) => previousDocument.id === documentItem.id,
+              )
+            ) {
+              continue;
             }
 
             const matchingLocalDocument =
@@ -460,15 +621,14 @@ export const useEditorAccountSync = ({
               );
 
             if (!matchingLocalDocument) {
-              return true;
+              continue;
             }
 
             localIdReplacementById.set(
               matchingLocalDocument.id,
               documentItem.id,
             );
-            return false;
-          });
+          }
 
           const mergedDocuments = previousDocuments
             .map((documentItem) => {
@@ -502,11 +662,7 @@ export const useEditorAccountSync = ({
             setActiveDocumentId(activeReplacementId);
           }
 
-          if (missingApiDocuments.length === 0) {
-            return mergedDocuments;
-          }
-
-          return [...mergedDocuments, ...missingApiDocuments];
+          return mergedDocuments;
         });
       })
       .catch(() => {
@@ -519,6 +675,7 @@ export const useEditorAccountSync = ({
   }, [
     authToken,
     authenticatedUser,
+    detachAllServerDocumentsToLocal,
     hadStoredDocuments,
     setActiveDocumentId,
     setDocuments,
@@ -611,6 +768,14 @@ export const useEditorAccountSync = ({
         toast.error("Não foi possível localizar o documento ativo.", {
           id: savingToastId,
         });
+        return;
+      }
+
+      if (result.status === "notFound") {
+        const message = result.localDocumentId
+          ? "Documento não existe mais no servidor. Mantive uma cópia local; salve novamente para criar um novo arquivo."
+          : "Documento não encontrado no servidor. Abra a versão salva pela biblioteca de documentos.";
+        toast.error(message, { id: savingToastId });
         return;
       }
 

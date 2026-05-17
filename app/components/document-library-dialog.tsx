@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDown,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -10,7 +11,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   type DocumentApiResponse,
   deleteDocumentWithApi,
@@ -36,6 +38,27 @@ import {
 } from "./editor-document";
 
 const PAGE_SIZE = 10;
+const libraryDialogContentClassName =
+  "flex h-[calc(100svh-1rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden p-0 sm:h-auto sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100%-2rem)]";
+const libraryDialogBodyClassName =
+  "grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[minmax(280px,360px)_1fr]";
+const libraryListPaneClassName =
+  "min-h-0 shrink-0 flex-col border-b border-zinc-200 md:shrink md:border-r md:border-b-0";
+const libraryListClassName =
+  "min-h-0 flex-1 overflow-y-auto p-2 md:min-h-[260px]";
+const libraryPreviewPaneClassName = "relative min-h-0 flex-col";
+const libraryMobilePreviewNavClassName =
+  "flex shrink-0 border-b border-zinc-200/80 bg-white px-4 py-2 md:hidden";
+const libraryPreviewContentClassName =
+  "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 md:min-h-[300px]";
+const libraryScrollHintClassName =
+  "pointer-events-none absolute bottom-32 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white/95 text-zinc-500 shadow-sm md:hidden";
+const libraryEmptyPreviewClassName =
+  "hidden min-h-[360px] flex-1 items-center justify-center px-6 text-center text-sm text-zinc-500 md:flex";
+const documentDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
 
 type LibraryDocument = Document & {
   isDraft?: boolean;
@@ -72,10 +95,7 @@ const formatDate = (date: Date) => {
     return "Data indisponível";
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  return documentDateFormatter.format(date);
 };
 
 const getPlainTextPreview = (html: string) => {
@@ -100,6 +120,7 @@ export default function DocumentLibraryDialog({
   onOpenDocument,
   onRenameDocument,
 }: DocumentLibraryDialogProps) {
+  const previewScrollRef = useRef<HTMLDivElement>(null);
   const [actionMenuDocumentId, setActionMenuDocumentId] = useState<
     string | null
   >(null);
@@ -119,6 +140,7 @@ export default function DocumentLibraryDialog({
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
     null,
   );
+  const [showPreviewScrollHint, setShowPreviewScrollHint] = useState(false);
   const [totalRemoteDocuments, setTotalRemoteDocuments] = useState(0);
 
   const localDocuments = useMemo(() => {
@@ -163,11 +185,46 @@ export default function DocumentLibraryDialog({
       ) ?? null,
     [libraryDocuments, selectedDocumentId],
   );
+  const hasSelectedDocument = selectedDocument !== null;
 
   const totalPages = Math.max(1, Math.ceil(totalRemoteDocuments / PAGE_SIZE));
   const hasSelectedDocumentOpen = selectedDocument
     ? documents.some((documentItem) => documentItem.id === selectedDocument.id)
     : false;
+
+  const syncPreviewScrollHint = useCallback(() => {
+    const previewScrollElement = previewScrollRef.current;
+
+    if (!previewScrollElement) {
+      setShowPreviewScrollHint(false);
+      return;
+    }
+
+    const hasOverflow =
+      previewScrollElement.scrollHeight > previewScrollElement.clientHeight + 8;
+    const hasMoreBelow =
+      previewScrollElement.scrollTop + previewScrollElement.clientHeight <
+      previewScrollElement.scrollHeight - 8;
+
+    setShowPreviewScrollHint(hasOverflow && hasMoreBelow);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !selectedDocument) {
+      setShowPreviewScrollHint(false);
+      return;
+    }
+
+    const animationFrameId = window.requestAnimationFrame(
+      syncPreviewScrollHint,
+    );
+    window.addEventListener("resize", syncPreviewScrollHint);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", syncPreviewScrollHint);
+    };
+  }, [open, selectedDocument, syncPreviewScrollHint]);
 
   useEffect(() => {
     if (!open) {
@@ -363,7 +420,7 @@ export default function DocumentLibraryDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[calc(100svh-1rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden p-0 sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100%-2rem)]">
+        <DialogContent className={libraryDialogContentClassName}>
           <DialogHeader className="shrink-0 border-b border-zinc-200/80 bg-zinc-50/70 px-4 py-4 sm:px-6">
             <DialogTitle>Ver documentos</DialogTitle>
             <DialogDescription>
@@ -371,8 +428,13 @@ export default function DocumentLibraryDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[minmax(280px,360px)_1fr]">
-            <div className="flex min-h-0 flex-col border-b border-zinc-200 md:border-r md:border-b-0">
+          <div className={libraryDialogBodyClassName}>
+            <div
+              className={cn(
+                libraryListPaneClassName,
+                hasSelectedDocument ? "hidden md:flex" : "flex",
+              )}
+            >
               <div className="shrink-0 border-b border-zinc-200/80 p-3">
                 <div className="relative">
                   <Search className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-zinc-400" />
@@ -385,10 +447,10 @@ export default function DocumentLibraryDialog({
                 </div>
               </div>
 
-              <div className="min-h-[260px] flex-1 overflow-y-auto p-2">
+              <div className={libraryListClassName}>
                 {isLoading ? (
                   <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-                    Carregando documentos...
+                    Carregando documentos…
                   </div>
                 ) : libraryDocuments.length === 0 ? (
                   <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-500">
@@ -513,10 +575,35 @@ export default function DocumentLibraryDialog({
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-col">
+            <div
+              className={cn(
+                libraryPreviewPaneClassName,
+                hasSelectedDocument ? "flex" : "hidden md:flex",
+              )}
+            >
               {selectedDocument ? (
                 <>
-                  <div className="min-h-[300px] flex-1 overflow-y-auto p-4 sm:p-6">
+                  <div className={libraryMobilePreviewNavClassName}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="w-fit gap-2 px-0 text-zinc-600 hover:bg-transparent hover:text-zinc-950"
+                      onClick={() => {
+                        setSelectedDocumentId(null);
+                        setActionMenuDocumentId(null);
+                      }}
+                    >
+                      <ChevronLeft className="size-4" />
+                      Voltar
+                    </Button>
+                  </div>
+
+                  <div
+                    className={libraryPreviewContentClassName}
+                    onScroll={syncPreviewScrollHint}
+                    ref={previewScrollRef}
+                  >
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="truncate font-semibold text-zinc-950">
@@ -542,6 +629,7 @@ export default function DocumentLibraryDialog({
                           sandbox=""
                           srcDoc={previewSrcDoc}
                           className="h-72 w-full border-0 bg-white"
+                          onLoad={syncPreviewScrollHint}
                         />
                       ) : (
                         <p className="text-zinc-500">{previewText}</p>
@@ -562,6 +650,15 @@ export default function DocumentLibraryDialog({
                     </div>
                   </div>
 
+                  {showPreviewScrollHint ? (
+                    <div
+                      aria-hidden="true"
+                      className={libraryScrollHintClassName}
+                    >
+                      <ArrowDown className="size-4 animate-bounce" />
+                    </div>
+                  ) : null}
+
                   <DialogFooter className="shrink-0 border-t border-zinc-200/80 bg-white px-4 py-4 sm:px-6">
                     <Button
                       type="button"
@@ -576,7 +673,7 @@ export default function DocumentLibraryDialog({
                   </DialogFooter>
                 </>
               ) : (
-                <div className="flex min-h-[360px] flex-1 items-center justify-center px-6 text-center text-sm text-zinc-500">
+                <div className={libraryEmptyPreviewClassName}>
                   Selecione um documento na lista para ver a pré-visualização.
                 </div>
               )}

@@ -309,6 +309,10 @@ export const useEditorAccountSync = ({
         );
 
         setDocuments((previousDocuments) => {
+          const submittedDocumentFingerprint = getDocumentFingerprint({
+            title: currentDocument.title,
+            content: currentDocument.content,
+          });
           const savedDocumentFingerprint = getDocumentFingerprint({
             title: savedDocument.title,
             content: savedDocument.content,
@@ -324,11 +328,19 @@ export const useEditorAccountSync = ({
 
                 didApplySavedDocument = true;
 
+                const hasNewerLocalChanges =
+                  getDocumentFingerprint(documentItem) !==
+                  submittedDocumentFingerprint;
+
                 return {
                   ...documentItem,
                   clientDocumentId: savedDocument.clientDocumentId ?? null,
-                  title: normalizeDocumentTitle(savedDocument.title),
-                  content: savedDocument.content ?? "",
+                  title: hasNewerLocalChanges
+                    ? documentItem.title
+                    : normalizeDocumentTitle(savedDocument.title),
+                  content: hasNewerLocalChanges
+                    ? documentItem.content
+                    : (savedDocument.content ?? ""),
                   serverUpdatedAt: savedDocument.updatedAt,
                   titleMode: "manual" as const,
                 };
@@ -344,12 +356,20 @@ export const useEditorAccountSync = ({
 
               didApplySavedDocument = true;
 
+              const hasNewerLocalChanges =
+                getDocumentFingerprint(documentItem) !==
+                submittedDocumentFingerprint;
+
               return {
                 ...documentItem,
                 id: savedDocument.id,
                 clientDocumentId: savedDocument.clientDocumentId ?? null,
-                title: normalizeDocumentTitle(savedDocument.title),
-                content: savedDocument.content ?? "",
+                title: hasNewerLocalChanges
+                  ? documentItem.title
+                  : normalizeDocumentTitle(savedDocument.title),
+                content: hasNewerLocalChanges
+                  ? documentItem.content
+                  : (savedDocument.content ?? ""),
                 serverUpdatedAt: savedDocument.updatedAt,
                 titleMode: "manual" as const,
               };

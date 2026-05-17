@@ -5,7 +5,6 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
-  CircleHelp,
   Code,
   Eraser,
   Highlighter,
@@ -135,7 +134,6 @@ export default function EditorToolbar({
   onAlignRight,
   onImage,
   onMathChange,
-  onHelp,
 }: EditorToolbarProps) {
   const activeButtonClass =
     "border-zinc-900/10 bg-zinc-900/5 text-emerald-600 hover:bg-zinc-900/10 hover:text-emerald-700";
@@ -144,7 +142,7 @@ export default function EditorToolbar({
 
   return (
     <TooltipProvider>
-      <div className="sticky top-15 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur sm:sm:top-17">
+      <div className="sticky top-15 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur sm:top-[4.25rem]">
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max snap-x snap-mandatory items-center justify-start gap-2 md:justify-between sm:gap-3">
             <div className="shrink-0">
@@ -156,6 +154,7 @@ export default function EditorToolbar({
                 className="ml-2"
               />
             </div>
+
             <div className={groupClassName}>
               <ToolbarActionButton
                 tooltip="Desfazer"

@@ -38,6 +38,14 @@ import {
 } from "./editor-document";
 
 const PAGE_SIZE = 10;
+const DOCUMENT_LIBRARY_SKELETON_ITEMS = [
+  "first",
+  "second",
+  "third",
+  "fourth",
+  "fifth",
+  "sixth",
+] as const;
 const libraryDialogContentClassName =
   "flex h-[calc(100svh-1rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden p-0 sm:h-auto sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100%-2rem)]";
 const libraryDialogBodyClassName =
@@ -109,6 +117,26 @@ const getPlainTextPreview = (html: string) => {
 
   return text || "Documento sem conteúdo.";
 };
+
+const DocumentLibraryListSkeleton = () => (
+  <output aria-label="Carregando documentos" className="block space-y-1">
+    <span className="sr-only">Carregando documentos...</span>
+    {DOCUMENT_LIBRARY_SKELETON_ITEMS.map((item) => (
+      <div
+        aria-hidden="true"
+        className="flex animate-pulse items-center gap-2 rounded-md border border-transparent px-2 py-2"
+        key={item}
+      >
+        <div className="size-4 shrink-0 rounded-sm bg-emerald-100" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-3.5 w-3/4 rounded bg-zinc-200" />
+          <div className="h-2.5 w-1/2 rounded bg-zinc-100" />
+        </div>
+        <div className="size-7 shrink-0 rounded-md bg-zinc-100" />
+      </div>
+    ))}
+  </output>
+);
 
 export default function DocumentLibraryDialog({
   authToken,
@@ -449,9 +477,7 @@ export default function DocumentLibraryDialog({
 
               <div className={libraryListClassName}>
                 {isLoading ? (
-                  <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-                    Carregando documentos…
-                  </div>
+                  <DocumentLibraryListSkeleton />
                 ) : libraryDocuments.length === 0 ? (
                   <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-500">
                     Nenhum documento encontrado.

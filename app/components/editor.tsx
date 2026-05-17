@@ -211,9 +211,15 @@ export default function Editor() {
 
       action(context);
       persistCurrentDocumentHtml();
+      scheduleAutosave();
       syncToolbarState();
     },
-    [getCommandContext, persistCurrentDocumentHtml, syncToolbarState],
+    [
+      getCommandContext,
+      persistCurrentDocumentHtml,
+      scheduleAutosave,
+      syncToolbarState,
+    ],
   );
 
   const {

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import DesktopDownloadSection from "./components/desktop-download-section";
 import FeaturesSection from "./components/features-section";
 import HeroSection from "./components/hero-section";
+import ProductGridSection from "./components/product-grid-section";
 import SiteCta from "./components/site-cta";
 import SiteFooter from "./components/site-footer";
 import SiteHeader from "./components/site-header";
@@ -19,8 +21,10 @@ export default function SitePage() {
       <SiteHeader />
       <HeroSection />
       <FeaturesSection />
+      <ProductGridSection />
       <WorkflowSection />
       <SyncSection />
+      <DesktopDownloadSection />
       <SiteCta />
       <SiteFooter />
     </main>

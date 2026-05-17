@@ -8,6 +8,7 @@ import {
   Languages,
   Library,
   PencilRuler,
+  Sparkles,
   WandSparkles,
 } from "lucide-react";
 
@@ -53,9 +54,9 @@ export const workflowItems = [
   },
   {
     icon: Cloud,
-    title: "Continue de onde parou",
+    title: "Trabalhe no seu ritmo",
     description:
-      "Trabalhe localmente, salve na nuvem e abra seus documentos quando precisar retomar uma ideia.",
+      "Escreva localmente, salve na nuvem e retome seus documentos quando precisar.",
   },
   {
     icon: GitBranch,
@@ -88,7 +89,54 @@ export const heroStats = [
 export const navItems = [
   { label: "Recursos", href: "#recursos" },
   { label: "Fluxo", href: "#fluxo" },
+  { label: "Produto", href: "#produto" },
+  { label: "Download", href: "#download" },
   { label: "Por que Calcify", href: "#diferencial" },
+];
+
+export const productGridItems = [
+  {
+    icon: Sparkles,
+    title: "Escreva como em uma nota. Resolva como em uma ferramenta.",
+    description:
+      "O Calcify mantém a página simples para capturar pensamento rápido, mas entrega comandos de editor quando a nota precisa virar algo mais organizado.",
+    eyebrow: "Editor inteligente",
+    preview: "Plano da semana\n- orçamento\n- decisões\n- próximos passos",
+    className: "md:col-span-2",
+  },
+  {
+    icon: Calculator,
+    title: "Cálculo no ponto exato da decisão.",
+    description:
+      "Digite uma expressão no meio da nota e veja o resultado sem trocar para calculadora ou planilha. O contexto fica junto do número.",
+    eyebrow: "Contas no texto",
+    preview: "596.40 + 89.90 + 49.90\n= R$ 736,20",
+  },
+  {
+    icon: Library,
+    title: "Uma biblioteca para continuar rápido.",
+    description:
+      "Abas e documentos salvos ficam perto do editor, para você voltar ao que estava fazendo sem procurar arquivo.",
+    eyebrow: "Documentos",
+    preview: "Custos da semana\nPlanejamento\nIdeias do produto",
+  },
+  {
+    icon: Cloud,
+    title: "Local primeiro. Nuvem quando fizer sentido.",
+    description:
+      "Comece a escrever sem fricção e salve na nuvem quando o documento precisar acompanhar você.",
+    eyebrow: "Sincronização",
+    preview: "Rascunho local\nDocumento salvo\nPronto para retomar",
+  },
+  {
+    icon: FileText,
+    title: "Markdown entra, markdown sai.",
+    description:
+      "Isso importa quando a nota vira entrega. Você pode escrever no Calcify, organizar com títulos e listas, calcular custos ou estimativas e exportar em Markdown para documentação, GitHub, relatórios ou qualquer fluxo que aceite texto limpo.",
+    eyebrow: "Markdown portátil",
+    preview: "# Plano\n- custo\n- decisão",
+    className: "md:col-span-2 lg:col-span-3",
+  },
 ];
 
 export const qualityItems = [

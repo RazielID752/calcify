@@ -1,22 +1,32 @@
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
-  Calculator,
-  CircleHelp,
+  ChevronDown,
   Code,
+  Eraser,
   FileText,
   Globe2,
-  Heading1,
   Highlighter,
   ImagePlus,
   Italic,
   Link2,
   List,
+  ListOrdered,
+  type LucideIcon,
   Menu,
   MoreHorizontal,
   Plus,
   Quote,
+  Redo2,
   Save,
   SquareCode,
+  Strikethrough,
+  Subscript,
+  Superscript,
+  Underline,
+  Undo2,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -25,34 +35,101 @@ import LogoCalcify from "@/assets/logo.svg";
 
 const tabs = ["Custos da semana", "Planejamento", "Ideias do produto"];
 
-const toolbarGroups = [
-  {
-    id: "text",
-    items: [
-      { id: "bold", icon: Bold },
-      { id: "italic", icon: Italic },
-      { id: "highlight", icon: Highlighter },
-      { id: "link", icon: Link2 },
-    ],
-  },
-  {
-    id: "blocks",
-    items: [
-      { id: "list", icon: List },
-      { id: "quote", icon: Quote },
-      { id: "code-block", icon: SquareCode },
-      { id: "inline-code", icon: Code },
-    ],
-  },
-  {
-    id: "insert",
-    items: [
-      { id: "calculator", icon: Calculator },
-      { id: "image", icon: ImagePlus },
-      { id: "help", icon: CircleHelp },
-    ],
-  },
+type ToolbarPreviewItem = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  active?: boolean;
+};
+
+const toolbarButtonGroups: ToolbarPreviewItem[][] = [
+  [
+    { id: "undo", label: "Desfazer", icon: Undo2 },
+    { id: "redo", label: "Refazer", icon: Redo2 },
+    { id: "clear-format", label: "Redefinir formato", icon: Eraser },
+    { id: "bullet-list", label: "Lista com marcadores", icon: List },
+    { id: "ordered-list", label: "Lista numerada", icon: ListOrdered },
+    { id: "quote", label: "Citacao", icon: Quote },
+    { id: "code-block", label: "Bloco de codigo", icon: SquareCode },
+  ],
+  [
+    { id: "bold", label: "Negrito", icon: Bold, active: true },
+    { id: "italic", label: "Italico", icon: Italic },
+    { id: "strike", label: "Tachado", icon: Strikethrough },
+    { id: "inline-code", label: "Codigo inline", icon: Code },
+    { id: "underline", label: "Sublinhado", icon: Underline },
+    { id: "highlight", label: "Realce", icon: Highlighter, active: true },
+    { id: "link", label: "Inserir link", icon: Link2 },
+    { id: "subscript", label: "Subscrito", icon: Subscript },
+    { id: "superscript", label: "Sobrescrito", icon: Superscript },
+  ],
+  [
+    { id: "align-left", label: "Alinhar a esquerda", icon: AlignLeft },
+    {
+      id: "align-center",
+      label: "Centralizar",
+      icon: AlignCenter,
+      active: true,
+    },
+    { id: "align-right", label: "Alinhar a direita", icon: AlignRight },
+    { id: "image", label: "Inserir imagem", icon: ImagePlus },
+  ],
 ];
+
+const toolbarSelects = {
+  heading: "Título",
+  math: "Math",
+};
+
+const toolbarGroupClassName =
+  "flex shrink-0 snap-start items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-1 py-1";
+
+const toolbarButtonClassName =
+  "flex size-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 shadow-xs sm:size-8";
+
+const activeToolbarButtonClassName =
+  "border-zinc-900/10 bg-zinc-900/5 text-emerald-600";
+
+function ToolbarPreviewButton({ item }: { item: ToolbarPreviewItem }) {
+  return (
+    <button
+      type="button"
+      aria-label={item.label}
+      className={`${toolbarButtonClassName} ${
+        item.active ? activeToolbarButtonClassName : ""
+      }`}
+    >
+      <item.icon className="size-4" />
+    </button>
+  );
+}
+
+function ToolbarPreviewDivider() {
+  return <div className="hidden h-7 w-px shrink-0 bg-zinc-200 sm:block" />;
+}
+
+function ToolbarPreviewSelect({
+  label,
+  variant = "default",
+}: {
+  label: string;
+  variant?: "default" | "math";
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={`flex h-9 shrink-0 items-center justify-between rounded-md border bg-white px-3 text-sm text-zinc-700 shadow-xs sm:h-8 ${
+        variant === "math"
+          ? "w-32 border-emerald-200 sm:w-44"
+          : "w-24 border-zinc-200 sm:w-28"
+      }`}
+    >
+      <span>{label}</span>
+      <ChevronDown className="ml-2 size-3.5 text-zinc-400" />
+    </button>
+  );
+}
 
 const menuItems = [
   { label: "Ver documentos", icon: FileText },
@@ -111,44 +188,52 @@ export default function ProductScene() {
 
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 pt-3">
           <div className="rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur">
-            <div className="flex min-w-max items-center justify-start gap-2 sm:gap-3">
-              <div className="shrink-0">
-                <Image
-                  src={LogoCalcify}
-                  alt="Calcify"
-                  width={80}
-                  height={80}
-                  className="ml-2"
-                />
-              </div>
+            <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-max snap-x snap-mandatory items-center justify-start gap-2 sm:gap-3">
+                <div className="shrink-0">
+                  <Image
+                    src={LogoCalcify}
+                    alt="Calcify"
+                    width={80}
+                    height={80}
+                    className="ml-2"
+                  />
+                </div>
 
-              {toolbarGroups.map((group) => (
-                <div
-                  key={group.id}
-                  className="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1"
-                >
-                  {group.items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      aria-label="Ferramenta do editor"
-                      className={`flex size-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 shadow-xs ${
-                        item.id === "bold"
-                          ? "border-zinc-900/10 bg-zinc-900/5 text-emerald-600"
-                          : ""
-                      }`}
-                    >
-                      <item.icon className="size-4" />
-                    </button>
+                <div className={toolbarGroupClassName}>
+                  {toolbarButtonGroups[0]?.slice(0, 3).map((item) => (
+                    <ToolbarPreviewButton key={item.id} item={item} />
+                  ))}
+                  <ToolbarPreviewSelect label={toolbarSelects.heading} />
+                  {toolbarButtonGroups[0]?.slice(3).map((item) => (
+                    <ToolbarPreviewButton key={item.id} item={item} />
                   ))}
                 </div>
-              ))}
 
-              <div className="hidden h-7 w-px bg-zinc-200 md:block" />
+                <ToolbarPreviewDivider />
 
-              <div className="hidden items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-sm text-zinc-600 lg:flex">
-                <Heading1 className="size-4" />
-                Título
+                <div className={toolbarGroupClassName}>
+                  {toolbarButtonGroups[1]?.map((item) => (
+                    <ToolbarPreviewButton key={item.id} item={item} />
+                  ))}
+                </div>
+
+                <ToolbarPreviewDivider />
+
+                <div className={toolbarGroupClassName}>
+                  {toolbarButtonGroups[2]?.map((item) => (
+                    <ToolbarPreviewButton key={item.id} item={item} />
+                  ))}
+                </div>
+
+                <ToolbarPreviewDivider />
+
+                <div className="flex shrink-0 snap-start items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-1 py-1">
+                  <ToolbarPreviewSelect
+                    label={toolbarSelects.math}
+                    variant="math"
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@ const fs = require("node:fs/promises");
 const http = require("node:http");
 const path = require("node:path");
 
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, dialog, shell } = require("electron");
 
 const DEV_URL = process.env.ELECTRON_START_URL;
 const HOST = "127.0.0.1";
@@ -12,10 +12,16 @@ const APP_ICON_PATH = path.join(
   "assets",
   process.platform === "darwin" ? "icon-big.png" : "icon.ico",
 );
+const UPDATE_MANIFEST_URL =
+  process.env.CALCIFY_UPDATE_MANIFEST_URL ||
+  "https://calcify.app/api/desktop/latest";
+const UPDATE_CHECK_DELAY_MS = 5000;
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let mainWindow = null;
 let staticServer = null;
 let isQuitting = false;
+let lastPromptedUpdateVersion = null;
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -128,6 +134,95 @@ function closeStaticServer() {
   });
 }
 
+function normalizeVersion(version) {
+  return String(version || "")
+    .trim()
+    .replace(/^v/i, "")
+    .split(".")
+    .map((part) => Number.parseInt(part, 10) || 0);
+}
+
+function isNewerVersion(latestVersion, currentVersion) {
+  const latestParts = normalizeVersion(latestVersion);
+  const currentParts = normalizeVersion(currentVersion);
+  const length = Math.max(latestParts.length, currentParts.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const latestPart = latestParts[index] || 0;
+    const currentPart = currentParts[index] || 0;
+
+    if (latestPart > currentPart) {
+      return true;
+    }
+
+    if (latestPart < currentPart) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function getDownloadUrl(downloads) {
+  if (!downloads || typeof downloads !== "object") {
+    return null;
+  }
+
+  const url = downloads[process.platform];
+  return typeof url === "string" && url.startsWith("http") ? url : null;
+}
+
+async function checkForDesktopUpdate() {
+  if (DEV_URL || !UPDATE_MANIFEST_URL) {
+    return;
+  }
+
+  try {
+    const response = await fetch(UPDATE_MANIFEST_URL, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const manifest = await response.json();
+    const latestVersion = manifest?.latestVersion;
+    const downloadUrl = getDownloadUrl(manifest?.downloads);
+
+    if (
+      !latestVersion ||
+      latestVersion === lastPromptedUpdateVersion ||
+      !downloadUrl ||
+      !isNewerVersion(latestVersion, app.getVersion())
+    ) {
+      return;
+    }
+
+    lastPromptedUpdateVersion = latestVersion;
+
+    const result = await dialog.showMessageBox(mainWindow, {
+      type: "info",
+      buttons: ["Atualizar agora", "Depois"],
+      defaultId: 0,
+      cancelId: 1,
+      title: "Atualizacao disponivel",
+      message: `Calcify ${latestVersion} ja esta disponivel.`,
+      detail:
+        "Sua versao esta desatualizada. Baixe a nova versao e instale quando for um bom momento para reiniciar o app.",
+    });
+
+    if (result.response === 0) {
+      await shell.openExternal(downloadUrl);
+    }
+  } catch (error) {
+    console.warn("Nao foi possivel verificar atualizacoes:", error);
+  }
+}
+
 async function createMainWindow() {
   if (process.platform === "darwin" && app.dock?.setIcon) {
     try {
@@ -170,6 +265,12 @@ async function createMainWindow() {
 app.whenReady().then(async () => {
   try {
     await createMainWindow();
+    setTimeout(() => {
+      checkForDesktopUpdate();
+    }, UPDATE_CHECK_DELAY_MS);
+    setInterval(() => {
+      checkForDesktopUpdate();
+    }, UPDATE_CHECK_INTERVAL_MS);
   } catch (error) {
     console.error("Falha ao iniciar o app desktop:", error);
     app.quit();

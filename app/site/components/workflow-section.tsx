@@ -12,8 +12,8 @@ export default function WorkflowSection() {
             Um documento que acompanha a velocidade da ideia.
           </h2>
           <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-700">
-            Calcify separa o que você está fazendo agora do que já está
-            guardado. As abas são o presente. A biblioteca é a memória.
+            Comece como em um bloco de notas, organize como em um editor moderno
+            e resolva contas sem trocar de ferramenta.
           </p>
         </div>
 

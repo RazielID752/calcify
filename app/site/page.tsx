@@ -8,9 +8,9 @@ import SyncSection from "./components/sync-section";
 import WorkflowSection from "./components/workflow-section";
 
 export const metadata: Metadata = {
-  title: "Calcify | Editor inteligente para notas, cálculos e documentos",
+  title: "Calcify | Notas que calculam enquanto você escreve",
   description:
-    "Conheça o Calcify: um editor bonito e direto para escrever, calcular, converter moedas e organizar documentos locais e na nuvem.",
+    "Conheça o Calcify: um editor limpo para escrever, calcular, converter moedas, organizar documentos e exportar em Markdown sem sair da nota.",
 };
 
 export default function SitePage() {

@@ -2,12 +2,12 @@ import {
   BadgeCheck,
   Calculator,
   Cloud,
+  Compass,
   FileText,
   GitBranch,
   Languages,
   Library,
   PencilRuler,
-  Sparkles,
   WandSparkles,
 } from "lucide-react";
 
@@ -53,9 +53,9 @@ export const workflowItems = [
   },
   {
     icon: Cloud,
-    title: "Salve local e na nuvem",
+    title: "Continue de onde parou",
     description:
-      "O documento mantém identidade local, versão de servidor e proteção contra conflitos.",
+      "Trabalhe localmente, salve na nuvem e abra seus documentos quando precisar retomar uma ideia.",
   },
   {
     icon: GitBranch,
@@ -66,10 +66,10 @@ export const workflowItems = [
 ];
 
 export const trustItems = [
-  "Autosave com versão conhecida do servidor",
-  "Criação idempotente para evitar duplicatas",
-  "Exclusão somente pela biblioteca",
-  "Documentos locais preservados quando a nuvem muda",
+  "Cálculos e conversões dentro da própria nota",
+  "Markdown para estruturar ideias sem montar páginas complexas",
+  "Biblioteca simples para encontrar e reabrir documentos",
+  "Exportação em Markdown para levar seu conteúdo adiante",
 ];
 
 export const productPills = [
@@ -80,28 +80,28 @@ export const productPills = [
 ];
 
 export const heroStats = [
-  { value: "1.5s", label: "autosave após edição" },
-  { value: "10", label: "documentos por página" },
-  { value: "0", label: "duplicatas em retry" },
+  { value: "1", label: "lugar para escrever e calcular" },
+  { value: "4", label: "níveis de títulos para organizar" },
+  { value: "MD", label: "entrada e saída em Markdown" },
 ];
 
 export const navItems = [
   { label: "Recursos", href: "#recursos" },
   { label: "Fluxo", href: "#fluxo" },
-  { label: "Sync", href: "#sync" },
+  { label: "Por que Calcify", href: "#diferencial" },
 ];
 
 export const qualityItems = [
   {
-    icon: Sparkles,
-    title: "Interface limpa",
+    icon: Compass,
+    title: "Menos arquitetura, mais pensamento",
     description:
-      "A página principal parece um caderno moderno, mas com ferramentas de produção por perto.",
+      "Você não precisa montar um sistema de páginas antes de escrever. Abra, digite, calcule e siga.",
   },
   {
     icon: BadgeCheck,
-    title: "Contrato claro",
+    title: "Feito para notas que trabalham",
     description:
-      "Local, nuvem, versão e biblioteca agora têm papéis diferentes e previsíveis.",
+      "Bom para planejamento, orçamento, estudos, reuniões e qualquer texto que precisa chegar a um número.",
   },
 ];

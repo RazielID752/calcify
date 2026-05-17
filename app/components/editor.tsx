@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DocumentLibraryDialog from "./document-library-dialog";
 import DocumentTabsBar from "./document-tabs-bar";
 import {
@@ -12,6 +12,9 @@ import {
 } from "./editor-commands";
 import EditorDialogsStack from "./editor-dialogs-stack";
 import { DEFAULT_DOCUMENT_TITLE, type Document } from "./editor-document";
+import EditorDocumentOutline, {
+  type EditorOutlineItem,
+} from "./editor-document-outline";
 import EditorFormattingToolbar from "./editor-formatting-toolbar";
 import EditorQuickMenu from "./editor-quick-menu";
 import EditorWritingSurface from "./editor-writing-surface";
@@ -62,6 +65,7 @@ export default function Editor() {
 
   const [zoom, setZoom] = useState(100);
   const [isDocumentLibraryOpen, setIsDocumentLibraryOpen] = useState(false);
+  const [outlineItems, setOutlineItems] = useState<EditorOutlineItem[]>([]);
   const { handleOpenHelpFromMenu, isHelpDialogOpen, setIsHelpDialogOpen } =
     useEditorHelpDialog();
 
@@ -189,6 +193,87 @@ export default function Editor() {
     onHtmlChange: applyHtmlToActiveDocument,
     debounceMs: 500,
   });
+
+  const syncDocumentOutline = useCallback(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      setOutlineItems([]);
+      return;
+    }
+
+    const nextOutlineItems = [...editor.querySelectorAll("h1,h2,h3,h4")]
+      .map((heading, index): EditorOutlineItem | null => {
+        const title = heading.textContent?.replace(/\s+/g, " ").trim() ?? "";
+
+        if (!title) {
+          return null;
+        }
+
+        const level = Number(heading.tagName.slice(1)) as 1 | 2 | 3 | 4;
+
+        return {
+          id: `${index}-${level}-${title}`,
+          index,
+          level,
+          title,
+        };
+      })
+      .filter((item): item is EditorOutlineItem => item !== null);
+
+    setOutlineItems((currentItems) => {
+      if (JSON.stringify(currentItems) === JSON.stringify(nextOutlineItems)) {
+        return currentItems;
+      }
+
+      return nextOutlineItems;
+    });
+  }, [editorRef]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    let animationFrameId = window.requestAnimationFrame(syncDocumentOutline);
+    const observer = new MutationObserver(() => {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(syncDocumentOutline);
+    });
+
+    observer.observe(editor, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      observer.disconnect();
+    };
+  }, [editorRef, syncDocumentOutline]);
+
+  const handleSelectOutlineItem = useCallback(
+    (item: EditorOutlineItem) => {
+      const editor = editorRef.current;
+
+      if (!editor) {
+        return;
+      }
+
+      const heading = editor.querySelectorAll("h1,h2,h3,h4").item(item.index);
+
+      if (!(heading instanceof HTMLElement)) {
+        return;
+      }
+
+      heading.scrollIntoView({ behavior: "smooth", block: "start" });
+      editor.focus({ preventScroll: true });
+    },
+    [editorRef],
+  );
 
   const { handleRenderMarkdown } = useEditorMarkdownShortcut({
     applyHtmlToActiveDocument,
@@ -425,7 +510,12 @@ export default function Editor() {
           onRenderMarkdown={handleRenderMarkdown}
         />
 
-        <div className="p-3 sm:p-3">
+        <div className="relative p-3 sm:p-3">
+          <EditorDocumentOutline
+            items={outlineItems}
+            onSelect={handleSelectOutlineItem}
+          />
+
           <EditorWritingSurface
             editorRef={editorRef}
             dragHandleTop={dragHandleTop}

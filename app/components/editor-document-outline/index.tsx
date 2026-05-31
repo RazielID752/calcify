@@ -2,16 +2,22 @@ import { ListTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type EditorOutlineItem = {
+  headingIndex: number;
   id: string;
-  index: number;
   level: 1 | 2 | 3 | 4;
   title: string;
 };
 
 type EditorDocumentOutlineProps = {
+  activeItemIndex: number;
   items: EditorOutlineItem[];
   onSelect: (item: EditorOutlineItem) => void;
 };
+
+const COMPACT_BAR_LIMIT = 7;
+const ACTIVE_BAR_CLASSNAME = "bg-emerald-500/90";
+const INACTIVE_BAR_CLASSNAME = "bg-zinc-400/80";
+const ACTIVE_ITEM_CLASSNAME = "bg-emerald-50 text-emerald-700";
 
 const getBarWidthClassName = (level: EditorOutlineItem["level"]) => {
   switch (level) {
@@ -39,7 +45,11 @@ const getIndentClassName = (level: EditorOutlineItem["level"]) => {
   }
 };
 
+const isOutlineItemActive = (itemIndex: number, activeItemIndex: number) =>
+  itemIndex === activeItemIndex;
+
 export default function EditorDocumentOutline({
+  activeItemIndex,
   items,
   onSelect,
 }: EditorDocumentOutlineProps) {
@@ -51,11 +61,14 @@ export default function EditorDocumentOutline({
     <aside className="group/outline fixed top-1/2 right-5 z-30 hidden -translate-y-1/2 lg:block">
       <div className="relative flex min-h-36 items-center justify-end">
         <div className="flex w-10 flex-col items-end gap-2 transition-opacity duration-150 group-hover/outline:opacity-0 group-focus-within/outline:opacity-0">
-          {items.slice(0, 7).map((item) => (
+          {items.slice(0, COMPACT_BAR_LIMIT).map((item, itemIndex) => (
             <span
               aria-hidden="true"
               className={cn(
-                "h-0.5 rounded-full bg-zinc-400/80",
+                "h-0.5 rounded-full transition-colors duration-200",
+                isOutlineItemActive(itemIndex, activeItemIndex)
+                  ? ACTIVE_BAR_CLASSNAME
+                  : INACTIVE_BAR_CLASSNAME,
                 getBarWidthClassName(item.level),
               )}
               key={item.id}
@@ -73,12 +86,14 @@ export default function EditorDocumentOutline({
             className="max-h-[62vh] overflow-y-auto pr-1"
           >
             <div className="space-y-1">
-              {items.map((item) => (
+              {items.map((item, itemIndex) => (
                 <button
                   type="button"
                   className={cn(
                     "block w-full rounded-md py-1.5 pr-2 text-left text-sm leading-snug transition hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                     getIndentClassName(item.level),
+                    isOutlineItemActive(itemIndex, activeItemIndex) &&
+                      ACTIVE_ITEM_CLASSNAME,
                   )}
                   key={item.id}
                   onClick={() => onSelect(item)}

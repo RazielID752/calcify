@@ -17,6 +17,8 @@ type EditorAction = (context: {
 
 type UseEditorContentHandlersParams = {
   editorRef: RefObject<HTMLDivElement | null>;
+  onRedo: () => void;
+  onUndo: () => void;
   persistHtml: () => void;
   updateSavedRange: () => void;
   syncToolbarState: () => void;
@@ -96,6 +98,8 @@ const moveCaretToEnd = (element: HTMLElement) => {
 
 export function useEditorContentHandlers({
   editorRef,
+  onRedo,
+  onUndo,
   persistHtml,
   updateSavedRange,
   syncToolbarState,
@@ -392,6 +396,27 @@ export function useEditorContentHandlers({
 
   const handleEditorKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
+      const pressedShortcutModifier = event.metaKey || event.ctrlKey;
+      const pressedKey = event.key.toLowerCase();
+
+      if (pressedShortcutModifier && pressedKey === "z") {
+        event.preventDefault();
+
+        if (event.shiftKey) {
+          onRedo();
+          return;
+        }
+
+        onUndo();
+        return;
+      }
+
+      if (pressedShortcutModifier && pressedKey === "y") {
+        event.preventDefault();
+        onRedo();
+        return;
+      }
+
       if (event.key === "Tab") {
         event.preventDefault();
         insertTabCharacters();
@@ -459,6 +484,8 @@ export function useEditorContentHandlers({
       findDeletableImageNodeFromSelection,
       insertTabCharacters,
       insertLineBreakInsideCodeBlock,
+      onRedo,
+      onUndo,
       run,
     ],
   );

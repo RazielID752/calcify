@@ -29,11 +29,68 @@ import { useEditorDocumentActions } from "../hooks/use-editor-document-actions";
 import { useEditorDocuments } from "../hooks/use-editor-documents";
 import { useEditorEmptyState } from "../hooks/use-editor-empty-state";
 import { useEditorHelpDialog } from "../hooks/use-editor-help-dialog";
+import { useEditorHistory } from "../hooks/use-editor-history";
 import { useEditorMarkdownShortcut } from "../hooks/use-editor-markdown-shortcut";
 import { useEditorSession } from "../hooks/use-editor-session";
 import { useEditorToolbarState } from "../hooks/use-editor-toolbar-state";
 import { useMarkdownRenderer } from "../hooks/use-markdown-renderer";
 import ZoomControls from "../zoom-controls";
+
+const OUTLINE_HEADING_SELECTOR = "h1,h2,h3,h4";
+const EMPTY_OUTLINE_ITEM_INDEX = -1;
+const OUTLINE_READING_LINE_VIEWPORT_RATIO = 0.35;
+
+const normalizeOutlineTitle = (value: string | null | undefined) =>
+  value?.replace(/\s+/g, " ").trim() ?? "";
+
+const isOutlineHeading = (element: Element): element is HTMLElement =>
+  element instanceof HTMLElement &&
+  Boolean(normalizeOutlineTitle(element.textContent));
+
+const getOutlineHeadings = (editor: HTMLDivElement) =>
+  [...editor.querySelectorAll(OUTLINE_HEADING_SELECTOR)].filter(
+    isOutlineHeading,
+  );
+
+const getActiveOutlineItemIndex = (headings: HTMLElement[]) => {
+  if (headings.length === 0) {
+    return EMPTY_OUTLINE_ITEM_INDEX;
+  }
+
+  const readingLineOffset =
+    window.innerHeight * OUTLINE_READING_LINE_VIEWPORT_RATIO;
+
+  return headings.reduce((activeItemIndex, heading, headingListIndex) => {
+    return heading.getBoundingClientRect().top <= readingLineOffset
+      ? headingListIndex
+      : activeItemIndex;
+  }, EMPTY_OUTLINE_ITEM_INDEX);
+};
+
+const createOutlineItem = (
+  heading: Element,
+  headingIndex: number,
+): EditorOutlineItem | null => {
+  const title = normalizeOutlineTitle(heading.textContent);
+
+  if (!title) {
+    return null;
+  }
+
+  const level = Number(heading.tagName.slice(1)) as 1 | 2 | 3 | 4;
+
+  return {
+    headingIndex,
+    id: `${headingIndex}-${level}-${title}`,
+    level,
+    title,
+  };
+};
+
+const areOutlineItemsEqual = (
+  currentItems: EditorOutlineItem[],
+  nextItems: EditorOutlineItem[],
+) => JSON.stringify(currentItems) === JSON.stringify(nextItems);
 
 export default function Editor() {
   const router = useRouter();
@@ -68,6 +125,9 @@ export default function Editor() {
   const [zoom, setZoom] = useState(100);
   const [isDocumentLibraryOpen, setIsDocumentLibraryOpen] = useState(false);
   const [outlineItems, setOutlineItems] = useState<EditorOutlineItem[]>([]);
+  const [activeOutlineItemIndex, setActiveOutlineItemIndex] = useState(
+    EMPTY_OUTLINE_ITEM_INDEX,
+  );
   const { handleOpenHelpFromMenu, isHelpDialogOpen, setIsHelpDialogOpen } =
     useEditorHelpDialog();
 
@@ -103,10 +163,27 @@ export default function Editor() {
     [editorRef],
   );
 
+  const { recordHistorySnapshot, redoHistory, resetHistory, undoHistory } =
+    useEditorHistory({
+      getCurrentHtml: getCurrentEditorHtml,
+      restoreHtml: (html) => {
+        applyExternalHtml(html);
+        updateActiveDocumentContent(html);
+      },
+    });
+
   const persistCurrentDocumentHtml = useCallback(() => {
+    const nextHtml = getCurrentEditorHtml();
+
     persistHtml();
-    updateActiveDocumentContent(getCurrentEditorHtml());
-  }, [getCurrentEditorHtml, persistHtml, updateActiveDocumentContent]);
+    updateActiveDocumentContent(nextHtml);
+    recordHistorySnapshot(nextHtml);
+  }, [
+    getCurrentEditorHtml,
+    persistHtml,
+    recordHistorySnapshot,
+    updateActiveDocumentContent,
+  ]);
 
   const {
     authenticatedUser,
@@ -129,12 +206,21 @@ export default function Editor() {
     persistCurrentDocumentHtml,
   });
 
+  const applyActiveDocumentHtml = useCallback(
+    (nextHtml: string) => {
+      applyExternalHtml(nextHtml);
+      resetHistory(nextHtml);
+    },
+    [applyExternalHtml, resetHistory],
+  );
+
   const applyHtmlToActiveDocument = useCallback(
     (nextHtml: string) => {
+      recordHistorySnapshot(nextHtml);
       applyExternalHtml(nextHtml);
       updateActiveDocumentContent(nextHtml);
     },
-    [applyExternalHtml, updateActiveDocumentContent],
+    [applyExternalHtml, recordHistorySnapshot, updateActiveDocumentContent],
   );
 
   const { toolbarState, syncToolbarState } = useEditorToolbarState({
@@ -162,7 +248,7 @@ export default function Editor() {
 
   useActiveEditorDocument({
     activeDocumentId,
-    applyExternalHtml,
+    applyExternalHtml: applyActiveDocumentHtml,
     clearHoveredDragBlock,
     documents,
     editorRef,
@@ -189,41 +275,50 @@ export default function Editor() {
     debounceMs: 500,
   });
 
+  const syncActiveOutlineIndex = useCallback(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      setActiveOutlineItemIndex(EMPTY_OUTLINE_ITEM_INDEX);
+      return;
+    }
+
+    const nextActiveItemIndex = getActiveOutlineItemIndex(
+      getOutlineHeadings(editor),
+    );
+
+    setActiveOutlineItemIndex((currentItemIndex) =>
+      currentItemIndex === nextActiveItemIndex
+        ? currentItemIndex
+        : nextActiveItemIndex,
+    );
+  }, [editorRef]);
+
   const syncDocumentOutline = useCallback(() => {
     const editor = editorRef.current;
 
     if (!editor) {
       setOutlineItems([]);
+      setActiveOutlineItemIndex(EMPTY_OUTLINE_ITEM_INDEX);
       return;
     }
 
-    const nextOutlineItems = [...editor.querySelectorAll("h1,h2,h3,h4")]
-      .map((heading, index): EditorOutlineItem | null => {
-        const title = heading.textContent?.replace(/\s+/g, " ").trim() ?? "";
-
-        if (!title) {
-          return null;
-        }
-
-        const level = Number(heading.tagName.slice(1)) as 1 | 2 | 3 | 4;
-
-        return {
-          id: `${index}-${level}-${title}`,
-          index,
-          level,
-          title,
-        };
-      })
+    const nextOutlineItems = [
+      ...editor.querySelectorAll(OUTLINE_HEADING_SELECTOR),
+    ]
+      .map(createOutlineItem)
       .filter((item): item is EditorOutlineItem => item !== null);
 
     setOutlineItems((currentItems) => {
-      if (JSON.stringify(currentItems) === JSON.stringify(nextOutlineItems)) {
+      if (areOutlineItemsEqual(currentItems, nextOutlineItems)) {
         return currentItems;
       }
 
       return nextOutlineItems;
     });
-  }, [editorRef]);
+
+    syncActiveOutlineIndex();
+  }, [editorRef, syncActiveOutlineIndex]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -250,6 +345,27 @@ export default function Editor() {
     };
   }, [editorRef, syncDocumentOutline]);
 
+  useEffect(() => {
+    let animationFrameId = 0;
+
+    const scheduleSyncActiveOutlineIndex = () => {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(syncActiveOutlineIndex);
+    };
+
+    scheduleSyncActiveOutlineIndex();
+    window.addEventListener("scroll", scheduleSyncActiveOutlineIndex, {
+      passive: true,
+    });
+    window.addEventListener("resize", scheduleSyncActiveOutlineIndex);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("scroll", scheduleSyncActiveOutlineIndex);
+      window.removeEventListener("resize", scheduleSyncActiveOutlineIndex);
+    };
+  }, [syncActiveOutlineIndex]);
+
   const handleSelectOutlineItem = useCallback(
     (item: EditorOutlineItem) => {
       const editor = editorRef.current;
@@ -258,16 +374,26 @@ export default function Editor() {
         return;
       }
 
-      const heading = editor.querySelectorAll("h1,h2,h3,h4").item(item.index);
+      const heading = editor
+        .querySelectorAll(OUTLINE_HEADING_SELECTOR)
+        .item(item.headingIndex);
 
       if (!(heading instanceof HTMLElement)) {
         return;
       }
 
       heading.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveOutlineItemIndex((currentItemIndex) => {
+        const selectedItemIndex = outlineItems.findIndex(
+          (outlineItem) => outlineItem.id === item.id,
+        );
+
+        return selectedItemIndex >= 0 ? selectedItemIndex : currentItemIndex;
+      });
       editor.focus({ preventScroll: true });
+      window.requestAnimationFrame(syncActiveOutlineIndex);
     },
-    [editorRef],
+    [editorRef, outlineItems, syncActiveOutlineIndex],
   );
 
   const { handleRenderMarkdown } = useEditorMarkdownShortcut({
@@ -302,6 +428,26 @@ export default function Editor() {
     ],
   );
 
+  const handleUndo = useCallback(() => {
+    if (!undoHistory()) {
+      return;
+    }
+
+    scheduleAutosave();
+    syncEditorEmptyState();
+    syncToolbarState();
+  }, [scheduleAutosave, syncEditorEmptyState, syncToolbarState, undoHistory]);
+
+  const handleRedo = useCallback(() => {
+    if (!redoHistory()) {
+      return;
+    }
+
+    scheduleAutosave();
+    syncEditorEmptyState();
+    syncToolbarState();
+  }, [redoHistory, scheduleAutosave, syncEditorEmptyState, syncToolbarState]);
+
   const {
     isImageDialogOpen,
     setIsImageDialogOpen,
@@ -325,6 +471,8 @@ export default function Editor() {
   const { handlePaste, handleEditorBeforeInput, handleEditorKeyDown } =
     useEditorContentHandlers({
       editorRef,
+      onRedo: handleRedo,
+      onUndo: handleUndo,
       persistHtml: persistCurrentDocumentHtml,
       updateSavedRange,
       syncToolbarState,
@@ -493,6 +641,7 @@ export default function Editor() {
         <EditorFormattingToolbar
           activeState={toolbarState}
           run={run}
+          onRedo={handleRedo}
           onAlign={handleAlign}
           onCopyMarkdown={handleCopyMarkdown}
           onHeadingChange={handleHeading}
@@ -503,10 +652,12 @@ export default function Editor() {
           onList={handleList}
           onMathChange={handleMathChange}
           onRenderMarkdown={handleRenderMarkdown}
+          onUndo={handleUndo}
         />
 
         <div className="relative p-3 sm:p-3">
           <EditorDocumentOutline
+            activeItemIndex={activeOutlineItemIndex}
             items={outlineItems}
             onSelect={handleSelectOutlineItem}
           />

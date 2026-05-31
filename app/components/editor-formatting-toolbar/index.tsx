@@ -18,6 +18,7 @@ type RunEditorCommand = (
 
 type EditorFormattingToolbarProps = {
   activeState: EditorToolbarState;
+  onRedo: () => void;
   onAlign: (align: AlignType) => void;
   onCopyMarkdown: () => void;
   onHeadingChange: (level: HeadingLevel) => void;
@@ -28,11 +29,13 @@ type EditorFormattingToolbarProps = {
   onList: (type: ListType) => void;
   onMathChange: (value: string) => void;
   onRenderMarkdown: () => void;
+  onUndo: () => void;
   run: RunEditorCommand;
 };
 
 export default function EditorFormattingToolbar({
   activeState,
+  onRedo,
   onAlign,
   onCopyMarkdown,
   onHeadingChange,
@@ -43,13 +46,14 @@ export default function EditorFormattingToolbar({
   onList,
   onMathChange,
   onRenderMarkdown,
+  onUndo,
   run,
 }: EditorFormattingToolbarProps) {
   return (
     <EditorToolbar
       activeState={activeState}
-      onUndo={() => run((context) => editorCommands.undo(context))}
-      onRedo={() => run((context) => editorCommands.redo(context))}
+      onUndo={onUndo}
+      onRedo={onRedo}
       onResetFormatting={() =>
         run((context) => editorCommands.resetFormatting(context))
       }

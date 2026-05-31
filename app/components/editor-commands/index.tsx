@@ -85,6 +85,14 @@ const runExecCommand = (
   document.execCommand(command, false, value);
 };
 
+const runHistoryCommand = (
+  context: EditorContext,
+  command: "undo" | "redo",
+) => {
+  context.editor.focus({ preventScroll: true });
+  document.execCommand(command, false);
+};
+
 const unwrapElement = (element: HTMLElement) => {
   const parent = element.parentNode;
 
@@ -424,10 +432,10 @@ const formatSelectionAsParagraph = () => {
 
 export const editorCommands = {
   undo(context: EditorContext) {
-    runExecCommand(context, "undo");
+    runHistoryCommand(context, "undo");
   },
   redo(context: EditorContext) {
-    runExecCommand(context, "redo");
+    runHistoryCommand(context, "redo");
   },
   heading(context: EditorContext, level: HeadingLevel) {
     restoreSelection(context);

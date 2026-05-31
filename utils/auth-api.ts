@@ -97,7 +97,7 @@ export {
 	isGuid,
 	updateDocumentTitleWithApi,
 	upsertDocumentWithApi,
-} from "@/app/services/editor/document.service";
+} from "@/app/services/document.service";
 
 export async function fetchSpellcheckRulesWithApi(token: string) {
   const response = await fetch(`${resolveApiBaseUrl()}/api/spellcheck/rules`, {

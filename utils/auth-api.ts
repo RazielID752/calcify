@@ -8,6 +8,14 @@ import type {
   SpellcheckRulePayload,
 } from "@/app/interfaces/spellcheck";
 
+const readField = <T>(
+  source: Record<string, unknown>,
+  camelCase: string,
+  pascalCase: string,
+) => {
+  return (source[camelCase] ?? source[pascalCase]) as T | undefined;
+};
+
 const normalizeSpellcheckRuleResponse = (
   value: unknown,
 ): SpellcheckRuleApiResponse | null => {

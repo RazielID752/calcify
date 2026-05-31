@@ -1,5 +1,6 @@
 "use client";
 
+import axios from "axios";
 import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -15,6 +16,7 @@ import {
 } from "@/utils/auth-session";
 import { loginRequest } from "@/app/services/login.service";
 import useFetchStricht from "@/app/hooks/useFetchStricht";
+import useSonner from "@/app/hooks/useSonner";
 
 type UseLoginOptions = {
   onError?: (message: string) => void;
@@ -31,8 +33,9 @@ const getRedirectTarget = () => {
   return target;
 };
 
-export default function useLogin({ onError }: UseLoginOptions = {}) {
+export default function useLogin({ onError: externalOnError }: UseLoginOptions = {}) {
   const router = useRouter();
+  const { error: showError, success: showSuccess } = useSonner();
   const form = useForm<LoginFormValues>({
     mode: "onChange",
     defaultValues: loginDefaultValues,
@@ -44,19 +47,35 @@ export default function useLogin({ onError }: UseLoginOptions = {}) {
     }
   }, [router]);
 
-  const handleSuccess = useCallback(
+  const onSuccess = useCallback(
     (response: { data: LoginApiResponse }) => {
       persistAuthSession(response.data);
 
-      router.replace(getRedirectTarget());
+      showSuccess("Login realizado com sucesso");
+
+      window.setTimeout(() => {
+        router.replace(getRedirectTarget());
+      }, 250);
     },
-    [router],
+    [router, showSuccess],
+  );
+
+  const onError = useCallback(
+    (message: string, error: unknown) => {
+      const errorMessage = axios.isAxiosError(error) && 
+      error.response?.status === 400 ?
+      "Usuário ou senha inválidos" : message;
+
+      showError(errorMessage);
+      externalOnError?.(errorMessage);
+    },
+    [externalOnError, showError],
   );
 
   const loginFetch = useFetchStricht<LoginFormValues, LoginApiResponse>({
     request: loginRequest,
-    onSuccess: handleSuccess,
-    onError: (message) => onError?.(message),
+    onSuccess,
+    onError,
   });
 
   const onSubmit = form.handleSubmit(async (values) => {

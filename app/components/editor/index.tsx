@@ -1,9 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useState } from "react";
 import DocumentLibraryDialog from "../document-library-dialog";
 import DocumentTabsBar from "../document-tabs-bar";
+import EditorBlockActionMenu, {
+  type EditorBlockAction,
+} from "../editor-block-action-menu";
 import {
   type AlignType,
   editorCommands,
@@ -21,7 +24,12 @@ import EditorQuickMenu from "../editor-quick-menu";
 import EditorWritingSurface from "../editor-writing-surface";
 import { useActiveEditorDocument } from "../hooks/use-active-editor-document";
 import { useAutoTransforms } from "../hooks/use-auto-transforms";
-import { useBlockDragAndDrop } from "../hooks/use-block-drag-and-drop";
+import {
+  BLOCK_ACTION_PLACEHOLDER_ATTRIBUTE,
+  BLOCK_ACTION_PLACEHOLDER_CLASSNAME,
+  BLOCK_ACTION_PLACEHOLDER_SELECTOR,
+  useBlockDragAndDrop,
+} from "../hooks/use-block-drag-and-drop";
 import { useEditor } from "../hooks/use-editor";
 import { useEditorContentHandlers } from "../hooks/use-editor-content-handlers";
 import { useEditorDialogs } from "../hooks/use-editor-dialogs";
@@ -39,6 +47,7 @@ import ZoomControls from "../zoom-controls";
 const OUTLINE_HEADING_SELECTOR = "h1,h2,h3,h4";
 const EMPTY_OUTLINE_ITEM_INDEX = -1;
 const OUTLINE_READING_LINE_VIEWPORT_RATIO = 0.35;
+const BLOCK_ACTION_PLACEHOLDER_TEXT = "Digite aqui ou escolha uma função";
 
 const normalizeOutlineTitle = (value: string | null | undefined) =>
   value?.replace(/\s+/g, " ").trim() ?? "";
@@ -92,6 +101,46 @@ const areOutlineItemsEqual = (
   nextItems: EditorOutlineItem[],
 ) => JSON.stringify(currentItems) === JSON.stringify(nextItems);
 
+const isBlockActionPlaceholderElement = (
+  element: Element | null,
+): element is HTMLElement =>
+  element instanceof HTMLElement &&
+  element.matches(BLOCK_ACTION_PLACEHOLDER_SELECTOR);
+
+const getBlockActionPlaceholderFromTarget = (target?: EventTarget | null) => {
+  if (!(target instanceof Node)) {
+    return null;
+  }
+
+  const targetElement =
+    target.nodeType === Node.TEXT_NODE ? target.parentElement : target;
+
+  if (!(targetElement instanceof Element)) {
+    return null;
+  }
+
+  return targetElement.closest(BLOCK_ACTION_PLACEHOLDER_SELECTOR);
+};
+
+const removeBlockActionPlaceholderStyles = (element: HTMLElement) => {
+  element.removeAttribute(BLOCK_ACTION_PLACEHOLDER_ATTRIBUTE);
+  element.classList.remove(...BLOCK_ACTION_PLACEHOLDER_CLASSNAME.split(" "));
+};
+
+const removeBlockElement = (element: HTMLElement) => {
+  const parentElement = element.parentElement;
+
+  element.remove();
+
+  if (
+    parentElement instanceof HTMLElement &&
+    (parentElement.tagName === "UL" || parentElement.tagName === "OL") &&
+    parentElement.children.length === 0
+  ) {
+    parentElement.remove();
+  }
+};
+
 export default function Editor() {
   const router = useRouter();
   const {
@@ -124,6 +173,9 @@ export default function Editor() {
 
   const [zoom, setZoom] = useState(100);
   const [isDocumentLibraryOpen, setIsDocumentLibraryOpen] = useState(false);
+  const [blockActionMenuTop, setBlockActionMenuTop] = useState<number | null>(
+    null,
+  );
   const [outlineItems, setOutlineItems] = useState<EditorOutlineItem[]>([]);
   const [activeOutlineItemIndex, setActiveOutlineItemIndex] = useState(
     EMPTY_OUTLINE_ITEM_INDEX,
@@ -147,8 +199,10 @@ export default function Editor() {
     dragIndicatorTop,
     isDraggingBlock,
     clearHoveredDragBlock,
+    clearPinnedDragBlock,
     finishBlockDrag,
     handleStartBlockDrag,
+    insertBlockAfterHoveredBlock,
   } = useBlockDragAndDrop({
     editorRef,
     activeDocumentId,
@@ -485,9 +539,12 @@ export default function Editor() {
     }, 150);
   };
 
-  const handleList = (type: ListType) => {
-    run((context) => editorCommands.list(context, type));
-  };
+  const handleList = useCallback(
+    (type: ListType) => {
+      run((context) => editorCommands.list(context, type));
+    },
+    [run],
+  );
 
   const handleAlign = (align: AlignType) => {
     run((context) => editorCommands.align(context, align));
@@ -505,9 +562,177 @@ export default function Editor() {
     }, 150);
   };
 
-  const insertMathShortcut = (value: string) => {
-    run((context) => editorCommands.insertMath(context, value));
-  };
+  const insertMathShortcut = useCallback(
+    (value: string) => {
+      run((context) => editorCommands.insertMath(context, value));
+    },
+    [run],
+  );
+
+  const persistPlaceholderCleanup = useCallback(() => {
+    persistCurrentDocumentHtml();
+    scheduleAutosave();
+    syncEditorEmptyState();
+    syncToolbarState();
+  }, [
+    persistCurrentDocumentHtml,
+    scheduleAutosave,
+    syncEditorEmptyState,
+    syncToolbarState,
+  ]);
+
+  const removeIdleBlockActionPlaceholder = useCallback(
+    (target?: EventTarget | null) => {
+      const editor = editorRef.current;
+
+      if (!editor) {
+        clearPinnedDragBlock();
+        setBlockActionMenuTop(null);
+        return;
+      }
+
+      const targetPlaceholder = getBlockActionPlaceholderFromTarget(target);
+
+      if (targetPlaceholder && editor.contains(targetPlaceholder)) {
+        clearPinnedDragBlock();
+        setBlockActionMenuTop(null);
+        return;
+      }
+
+      const placeholders = [
+        ...editor.querySelectorAll(BLOCK_ACTION_PLACEHOLDER_SELECTOR),
+      ];
+      let removedPlaceholder = false;
+
+      for (const placeholder of placeholders) {
+        if (!isBlockActionPlaceholderElement(placeholder)) {
+          continue;
+        }
+
+        if (placeholder.textContent?.trim()) {
+          removeBlockActionPlaceholderStyles(placeholder);
+          continue;
+        }
+
+        removeBlockElement(placeholder);
+        removedPlaceholder = true;
+      }
+
+      setBlockActionMenuTop(null);
+      clearPinnedDragBlock();
+
+      if (removedPlaceholder) {
+        persistPlaceholderCleanup();
+      }
+    },
+    [clearPinnedDragBlock, editorRef, persistPlaceholderCleanup],
+  );
+
+  const clearEditedBlockActionPlaceholders = useCallback(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    for (const placeholder of [
+      ...editor.querySelectorAll(BLOCK_ACTION_PLACEHOLDER_SELECTOR),
+    ]) {
+      if (!isBlockActionPlaceholderElement(placeholder)) {
+        continue;
+      }
+
+      if (placeholder.textContent?.trim()) {
+        removeBlockActionPlaceholderStyles(placeholder);
+      }
+    }
+  }, [editorRef]);
+
+  const activateBlockActionPlaceholders = useCallback(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    for (const placeholder of [
+      ...editor.querySelectorAll(BLOCK_ACTION_PLACEHOLDER_SELECTOR),
+    ]) {
+      if (!isBlockActionPlaceholderElement(placeholder)) {
+        continue;
+      }
+
+      removeBlockActionPlaceholderStyles(placeholder);
+    }
+  }, [editorRef]);
+
+  const handleOpenBlockActionMenu = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const insertedBlock = insertBlockAfterHoveredBlock(
+        BLOCK_ACTION_PLACEHOLDER_TEXT,
+      );
+
+      if (!insertedBlock) {
+        return;
+      }
+
+      persistPlaceholderCleanup();
+      setBlockActionMenuTop(insertedBlock.top);
+    },
+    [insertBlockAfterHoveredBlock, persistPlaceholderCleanup],
+  );
+
+  const handleBlockAction = useCallback(
+    (action: EditorBlockAction) => {
+      setBlockActionMenuTop(null);
+      clearPinnedDragBlock();
+      activateBlockActionPlaceholders();
+
+      switch (action) {
+        case "paragraph":
+          run((context) => editorCommands.paragraph(context));
+          return;
+        case "heading1":
+          run((context) => editorCommands.heading(context, "h1"));
+          return;
+        case "heading2":
+          run((context) => editorCommands.heading(context, "h2"));
+          return;
+        case "heading3":
+          run((context) => editorCommands.heading(context, "h3"));
+          return;
+        case "bulletList":
+          handleList("bullet");
+          return;
+        case "orderedList":
+          handleList("ordered");
+          return;
+        case "blockquote":
+          run((context) => editorCommands.blockquote(context));
+          return;
+        case "codeBlock":
+          run((context) => editorCommands.codeBlock(context));
+          return;
+        case "image":
+          handleImage();
+          return;
+        case "calculation":
+          insertMathShortcut(" = ");
+          return;
+      }
+    },
+    [
+      activateBlockActionPlaceholders,
+      clearPinnedDragBlock,
+      handleImage,
+      handleList,
+      insertMathShortcut,
+      run,
+    ],
+  );
 
   const handleSetActiveDocument = useCallback(
     (nextDocumentId: string) => {
@@ -671,8 +896,10 @@ export default function Editor() {
             isTitleEmpty={isTitleEmpty}
             spellcheckPopover={null}
             onStartBlockDrag={handleStartBlockDrag}
+            onOpenBlockActionMenu={handleOpenBlockActionMenu}
             onInput={(event) => {
               handleInputTransform(event);
+              clearEditedBlockActionPlaceholders();
               persistCurrentDocumentHtml();
               scheduleAutosave();
               ensureTitleBlockWhenEditorIsEmpty();
@@ -700,12 +927,21 @@ export default function Editor() {
               syncToolbarState();
             }}
             onBlur={() => {
+              removeIdleBlockActionPlaceholder();
               persistCurrentDocumentHtml();
               flushAutosave();
               syncEditorEmptyState();
               syncToolbarState();
             }}
           />
+
+          {blockActionMenuTop !== null ? (
+            <EditorBlockActionMenu
+              top={blockActionMenuTop}
+              onAction={handleBlockAction}
+              onClose={removeIdleBlockActionPlaceholder}
+            />
+          ) : null}
 
           <EditorDialogsStack
             imageDialogOpen={isImageDialogOpen}

@@ -437,6 +437,10 @@ export const editorCommands = {
   redo(context: EditorContext) {
     runHistoryCommand(context, "redo");
   },
+  paragraph(context: EditorContext) {
+    restoreSelection(context);
+    formatSelectionAsParagraph();
+  },
   heading(context: EditorContext, level: HeadingLevel) {
     restoreSelection(context);
 

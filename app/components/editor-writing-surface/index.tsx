@@ -1,4 +1,4 @@
-import { GripVertical } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import type {
   ClipboardEventHandler,
   FocusEventHandler,
@@ -28,6 +28,7 @@ type EditorWritingSurfaceProps = {
   onKeyUp: KeyboardEventHandler<HTMLDivElement>;
   onMouseUp: MouseEventHandler<HTMLDivElement>;
   onPaste: ClipboardEventHandler<HTMLDivElement>;
+  onOpenBlockActionMenu: MouseEventHandler<HTMLButtonElement>;
   onStartBlockDrag: MouseEventHandler<HTMLButtonElement>;
 };
 
@@ -48,6 +49,7 @@ export default function EditorWritingSurface({
   onKeyUp,
   onMouseUp,
   onPaste,
+  onOpenBlockActionMenu,
   onStartBlockDrag,
 }: EditorWritingSurfaceProps) {
   return (
@@ -73,16 +75,29 @@ export default function EditorWritingSurface({
       ) : null}
 
       {dragHandleTop !== null ? (
-        <button
-          type="button"
-          aria-label="Arrastar bloco"
-          title="Arrastar bloco"
-          onMouseDown={onStartBlockDrag}
-          className={`absolute -left-8 top-0 z-20 hidden size-6 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-emerald-200 hover:text-emerald-800 sm:flex ${isDraggingBlock ? "cursor-grabbing" : "cursor-grab"}`}
+        <div
+          className="absolute -left-17 top-0 z-20 hidden items-center gap-1 sm:flex"
           style={{ top: `${dragHandleTop}px` }}
         >
-          <GripVertical className="size-4" />
-        </button>
+          <button
+            type="button"
+            aria-label="Abrir funções do bloco"
+            title="Adicionar ou transformar bloco"
+            onMouseDown={onOpenBlockActionMenu}
+            className="flex size-6 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-emerald-200 hover:text-emerald-800"
+          >
+            <Plus className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Arrastar bloco"
+            title="Arrastar bloco"
+            onMouseDown={onStartBlockDrag}
+            className={`flex size-6 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-emerald-200 hover:text-emerald-800 ${isDraggingBlock ? "cursor-grabbing" : "cursor-grab"}`}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        </div>
       ) : null}
 
       {isDraggingBlock && dragIndicatorTop !== null ? (

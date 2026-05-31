@@ -14,7 +14,7 @@ import {
   persistAuthSession,
 } from "@/utils/auth-session";
 import { loginRequest } from "@/app/services/login.service";
-import useFetch from "@/app/hooks/useFetch";
+import useFetchStricht from "@/app/hooks/useFetchStricht";
 
 type UseLoginOptions = {
   onError?: (message: string) => void;
@@ -53,7 +53,7 @@ export default function useLogin({ onError }: UseLoginOptions = {}) {
     [router],
   );
 
-  const loginFetch = useFetch<LoginFormValues, LoginApiResponse>({
+  const loginFetch = useFetchStricht<LoginFormValues, LoginApiResponse>({
     request: loginRequest,
     onSuccess: handleSuccess,
     onError: (message) => onError?.(message),

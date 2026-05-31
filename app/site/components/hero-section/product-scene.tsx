@@ -247,7 +247,7 @@ export default function ProductScene() {
               <MoreHorizontal className="size-4" />
             </button>
 
-            <div className="mx-auto min-h-85 w-full max-w-7xl rounded-xl bg-white/70 px-3 py-6 outline-none sm:px-8">
+            <div className="mx-auto min-h-[340px] w-full max-w-7xl rounded-xl bg-white/70 px-3 py-6 outline-none sm:px-8">
               <div className="max-w-3xl">
                 <h2 className="text-4xl font-semibold text-zinc-950">
                   Custos da semana

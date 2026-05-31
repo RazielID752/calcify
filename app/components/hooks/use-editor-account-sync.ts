@@ -9,21 +9,20 @@ import {
 import { toast } from "sonner";
 import {
   ApiRequestError,
-  type DocumentApiResponse,
   deleteDocumentWithApi,
-  fetchDocumentsWithApi,
   fetchDocumentWithApi,
+  fetchDocumentsWithApi,
   isGuid,
-  loginWithApi,
-  logoutWithApi,
   upsertDocumentWithApi,
-} from "@/utils/auth-api";
+} from "@/app/services/document.service";
+import type { DocumentApiResponse } from "@/app/interfaces/documents";
 import {
   AUTH_TOKEN_STORAGE_KEY,
   AUTH_USER_STORAGE_KEY,
   clearAuthSession,
   persistAuthSession,
 } from "@/utils/auth-session";
+import { loginWithApi, logoutWithApi } from "@/utils/auth-api";
 import {
   createDocumentId,
   DEFAULT_DOCUMENT_TITLE,
@@ -55,7 +54,7 @@ type SyncResult =
   | { status: "conflict"; error: ApiRequestError }
   | { status: "error"; error: unknown };
 
-type UseEditorAccountSyncOptions = {
+export type UseEditorAccountSyncOptions = {
   documents: Document[];
   setDocuments: Dispatch<SetStateAction<Document[]>>;
   hadStoredDocuments: boolean;

@@ -25,17 +25,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  type DocumentApiResponse,
   deleteDocumentWithApi,
   fetchDocumentsWithApi,
   isGuid,
   updateDocumentTitleWithApi,
-} from "@/utils/auth-api";
+} from "@/app/services/document.service";
+import type { DocumentApiResponse } from "@/app/interfaces/documents";
 import {
   DEFAULT_DOCUMENT_TITLE,
   type Document,
   hasMeaningfulEditorContent,
-} from "./editor-document";
+} from "../editor-document";
 
 const PAGE_SIZE = 10;
 const DOCUMENT_LIBRARY_SKELETON_ITEMS = [

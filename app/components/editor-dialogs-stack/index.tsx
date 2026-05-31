@@ -1,8 +1,8 @@
-import EditorHelpDialog from "./editor-help-dialog";
-import EditorImportDialog from "./editor-import-dialog";
-import EditorLogoutDialog from "./editor-logout-dialog";
-import ImageDialog from "./image-dialog";
-import LinkDialog from "./link-dialog";
+import EditorHelpDialog from "../editor-help-dialog";
+import EditorImportDialog from "../editor-import-dialog";
+import EditorLogoutDialog from "../editor-logout-dialog";
+import ImageDialog from "../image-dialog";
+import LinkDialog from "../link-dialog";
 
 type EditorDialogsStackProps = {
   imageDialogOpen: boolean;

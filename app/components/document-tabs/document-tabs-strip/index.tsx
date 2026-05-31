@@ -48,7 +48,7 @@ export default function DocumentTabsStrip({
                     asChild
                     key={documentItem.id}
                     value={documentItem.id}
-                    className="max-w-[150px] shrink-0 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-zinc-600 shadow-none data-[state=active]:border-zinc-200 data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm sm:max-w-[190px]"
+                    className="max-w-37.5 shrink-0 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-zinc-600 shadow-none data-[state=active]:border-zinc-200 data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm sm:max-w-47.5"
                   >
                     <div className="inline-flex min-w-0 items-center gap-1">
                       <span className="truncate">{documentItem.title}</span>

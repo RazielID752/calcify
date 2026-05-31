@@ -11,7 +11,7 @@ export default function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 border-zinc-200/70 border-b bg-white/[0.82] backdrop-blur-2xl">
+    <header className="sticky top-0 z-30 border-zinc-200/70 border-b bg-white/82 backdrop-blur-2xl">
       <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"

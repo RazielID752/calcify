@@ -8,7 +8,8 @@ import {
   type LucideIcon,
   Plus,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +19,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  type DocumentTitleFormValues,
+  documentTitleDefaultValues,
+  documentTitleFormSchema,
+} from "@/app/forms/document";
 
 type Template = {
   id: string;
@@ -64,18 +70,25 @@ export default function CreateDocumentDialog({
   onOpenChange,
   onCreateDocument,
 }: CreateDocumentDialogProps) {
-  const [createDocumentTitle, setCreateDocumentTitle] = useState("");
+  const {
+	register,
+	handleSubmit,
+	reset,
+	formState: { errors },
+  } = useForm<DocumentTitleFormValues>({
+	defaultValues: documentTitleDefaultValues,
+  });
 
   useEffect(() => {
     if (!open) {
-      setCreateDocumentTitle("");
+		reset(documentTitleDefaultValues);
     }
-  }, [open]);
+  }, [open, reset]);
 
-  const handleCreateBlankDocument = useCallback(() => {
-    onCreateDocument(createDocumentTitle);
-    setCreateDocumentTitle("");
-  }, [createDocumentTitle, onCreateDocument]);
+  const handleCreateBlankDocument = handleSubmit((values) => {
+	onCreateDocument(values.title);
+	reset(documentTitleDefaultValues);
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,7 +124,11 @@ export default function CreateDocumentDialog({
               </div>
             </div>
 
-            <div className="space-y-2">
+            <form
+              id="create-document-form"
+              className="space-y-2"
+              onSubmit={handleCreateBlankDocument}
+            >
               <label
                 htmlFor="create-document-name"
                 className="mb-3 text-xs font-medium text-zinc-600"
@@ -123,26 +140,28 @@ export default function CreateDocumentDialog({
                 <FileText className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
                 <Input
                   id="create-document-name"
-                  value={createDocumentTitle}
-                  onChange={(event) =>
-                    setCreateDocumentTitle(event.target.value)
-                  }
                   placeholder={defaultDocumentTitle}
                   aria-label="Nome do novo documento"
                   className="h-9 bg-white pl-9"
+                  aria-invalid={errors.title ? "true" : "false"}
+                  {...register("title", documentTitleFormSchema.title)}
                 />
               </div>
+
+              {errors.title ? (
+                <p className="text-xs text-red-600">{errors.title.message}</p>
+              ) : null}
 
               <p className="text-xs text-zinc-500">
                 Se não preencher, usamos "{defaultDocumentTitle}".
               </p>
-            </div>
+            </form>
 
             <Button
-              type="button"
+              type="submit"
+              form="create-document-form"
               variant="outline"
               className="h-9 w-full justify-center border-emerald-300 bg-emerald-100/70 text-emerald-900 hover:bg-emerald-100"
-              onClick={handleCreateBlankDocument}
             >
               <Plus className="size-4" />
               Criar documento em branco

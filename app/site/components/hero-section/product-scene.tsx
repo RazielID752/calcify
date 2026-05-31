@@ -142,7 +142,7 @@ export default function ProductScene() {
     <div className="calcify-scale-in relative mx-auto mt-10 w-full max-w-6xl overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-950 p-2 shadow-2xl shadow-zinc-950/20 sm:mt-14 sm:p-3">
       <div className="calcify-shine-line absolute inset-x-12 top-0 h-px bg-white/40" />
 
-      <div className="relative min-h-[560px] overflow-hidden rounded-[22px] bg-[radial-gradient(circle_at_top,#e7f7ef_0%,#f8fafc_45%,#ffffff_100%)] px-3 pb-6 sm:px-6">
+      <div className="relative min-h-140 overflow-hidden rounded-[22px] bg-[radial-gradient(circle_at_top,#e7f7ef_0%,#f8fafc_45%,#ffffff_100%)] px-3 pb-6 sm:px-6">
         <div className="flex h-9 items-center gap-2 bg-white">
           <span className="size-3 rounded-full bg-[#ff5f57]" />
           <span className="size-3 rounded-full bg-[#ffbd2e]" />
@@ -156,7 +156,7 @@ export default function ProductScene() {
                 {tabs.map((tab, index) => (
                   <div
                     key={tab}
-                    className={`calcify-entrance inline-flex max-w-[170px] items-center gap-1 rounded-md border px-2 py-1 text-sm font-medium ${
+                    className={`calcify-entrance inline-flex max-w-42.5 items-center gap-1 rounded-md border px-2 py-1 text-sm font-medium ${
                       index === 0
                         ? "border-zinc-200 bg-white text-zinc-900 shadow-sm"
                         : "border-transparent bg-transparent text-zinc-600"
@@ -247,7 +247,7 @@ export default function ProductScene() {
               <MoreHorizontal className="size-4" />
             </button>
 
-            <div className="mx-auto min-h-[340px] w-full max-w-7xl rounded-xl bg-white/70 px-3 py-6 outline-none sm:px-8">
+            <div className="mx-auto min-h-85 w-full max-w-7xl rounded-xl bg-white/70 px-3 py-6 outline-none sm:px-8">
               <div className="max-w-3xl">
                 <h2 className="text-4xl font-semibold text-zinc-950">
                   Custos da semana

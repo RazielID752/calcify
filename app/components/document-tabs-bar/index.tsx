@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import CloseDocumentDialog from "./document-tabs/close-document-dialog";
-import CreateDocumentDialog from "./document-tabs/create-document-dialog";
+import CloseDocumentDialog from "../document-tabs/close-document-dialog";
+import CreateDocumentDialog from "../document-tabs/create-document-dialog";
 import DocumentTabsStrip, {
   type DocumentTabItem,
-} from "./document-tabs/document-tabs-strip";
-import RenameDocumentDialog from "./document-tabs/rename-document-dialog";
+} from "../document-tabs/document-tabs-strip";
+import RenameDocumentDialog from "../document-tabs/rename-document-dialog";
 
 type DocumentTabsBarProps = {
   documents: DocumentTabItem[];

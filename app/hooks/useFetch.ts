@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getApiErrorMessage } from "@/utils/api-client";
-import type { UseFetchProps } from "./useFetchProps";
+import type { UseFetchProps } from "@/app/interfaces/use-fetch";
 
 const SUCCESS_STATUS_CODES = [200, 201, 204, 206];
 

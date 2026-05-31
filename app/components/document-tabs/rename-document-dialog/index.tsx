@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  type DocumentTitleFormValues,
+  documentTitleDefaultValues,
+  documentTitleFormSchema,
+} from "@/app/forms/document";
 
 type RenameDocumentDialogProps = {
   open: boolean;
@@ -27,20 +33,32 @@ export default function RenameDocumentDialog({
   onOpenChange,
   onConfirm,
 }: RenameDocumentDialogProps) {
-  const [renameTitle, setRenameTitle] = useState("");
-  const renameTitleValue = useMemo(() => renameTitle.trim(), [renameTitle]);
+  const {
+	register,
+	handleSubmit,
+	reset,
+	formState: { errors },
+  } = useForm<DocumentTitleFormValues>({
+	defaultValues: documentTitleDefaultValues,
+  });
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    setRenameTitle(initialTitle);
-  }, [initialTitle, open]);
+    reset({ title: initialTitle });
+  }, [initialTitle, open, reset]);
 
-  const handleConfirmRename = useCallback(() => {
-    onConfirm(renameTitleValue || defaultDocumentTitle);
-  }, [defaultDocumentTitle, onConfirm, renameTitleValue]);
+  const handleConfirmRename = useCallback(
+    (values: DocumentTitleFormValues) => {
+      onConfirm(values.title.trim() || defaultDocumentTitle);
+      reset(documentTitleDefaultValues);
+    },
+    [defaultDocumentTitle, onConfirm, reset],
+  );
+
+  const submitRename = handleSubmit(handleConfirmRename);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -52,20 +70,18 @@ export default function RenameDocumentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleConfirmRename();
-          }}
-        >
+        <form className="space-y-4" onSubmit={submitRename}>
           <Input
-            value={renameTitle}
-            onChange={(event) => setRenameTitle(event.target.value)}
             placeholder={defaultDocumentTitle}
             aria-label="Novo nome do documento"
             autoFocus
+            aria-invalid={errors.title ? "true" : "false"}
+            {...register("title", documentTitleFormSchema.title)}
           />
+
+          {errors.title ? (
+            <p className="text-xs text-red-600">{errors.title.message}</p>
+          ) : null}
 
           <DialogFooter>
             <Button

@@ -8,8 +8,8 @@ import type {
   ReactNode,
   RefObject,
 } from "react";
-import { EDITOR_CONTENT_CLASSNAME } from "./editor-content-classname";
-import { BODY_PLACEHOLDER, TITLE_PLACEHOLDER } from "./editor-document";
+import { EDITOR_CONTENT_CLASSNAME } from "../editor-content-classname";
+import { BODY_PLACEHOLDER, TITLE_PLACEHOLDER } from "../editor-document";
 
 type EditorWritingSurfaceProps = {
   editorRef: RefObject<HTMLDivElement | null>;

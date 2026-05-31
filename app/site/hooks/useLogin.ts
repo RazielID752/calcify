@@ -3,18 +3,18 @@
 import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import type { LoginFormValues } from "@/app/site/form";
+import type { LoginFormValues } from "@/app/forms/auth";
 import {
   loginDefaultValues,
   loginFormSchema,
-} from "@/app/site/form";
-import type { LoginApiResponse } from "@/utils/auth-api";
+} from "@/app/forms/auth";
+import type { LoginApiResponse } from "@/app/interfaces/auth";
 import {
   hasStoredAuthSession,
   persistAuthSession,
 } from "@/utils/auth-session";
-import { loginRequest } from "../services/login.service";
-import useFetch from "../../hooks/useFetch";
+import { loginRequest } from "@/app/services/login.service";
+import useFetch from "@/app/hooks/useFetch";
 
 type UseLoginOptions = {
   onError?: (message: string) => void;

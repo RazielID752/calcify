@@ -39,7 +39,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { type HeadingLevel, mathOptions } from "./editor-commands";
+import { type HeadingLevel, mathOptions } from "../editor-commands";
 
 type EditorToolbarProps = {
   activeState: {

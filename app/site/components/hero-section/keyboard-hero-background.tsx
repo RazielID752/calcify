@@ -192,14 +192,14 @@ export default function KeyboardHeroBackground() {
   return (
     <div
       aria-hidden
-      className="group pointer-events-auto absolute inset-x-1/2 top-0 h-full w-[178vw] min-w-[1480px] -translate-x-1/2 overflow-hidden opacity-50"
+      className="group pointer-events-auto absolute inset-x-1/2 top-0 h-full w-[178vw] min-w-370 -translate-x-1/2 overflow-hidden opacity-50"
     >
-      <div className="absolute inset-x-0 top-0 mx-auto max-w-[1640px] px-6 pt-6">
+      <div className="absolute inset-x-0 top-0 mx-auto max-w-410 px-6 pt-6">
         <div className="calcify-keyboard-plane space-y-3 rounded-[34px] border border-zinc-900/5 bg-white/25 p-4 shadow-[0_30px_120px_-80px_rgba(24,24,27,0.45)] backdrop-blur-[2px] transition-colors duration-500 group-hover:border-emerald-400/25">
           {keyboardRows.map((row, rowIndex) => (
             <div
               key={`row-${row.join("-")}`}
-              className="grid grid-cols-[repeat(16,minmax(0,1fr))] gap-3"
+              className="grid grid-cols-16 gap-3"
               style={
                 {
                   "--calcify-row-delay": `${rowIndex * 90}ms`,

@@ -4,8 +4,8 @@ import {
   editorCommands,
   type HeadingLevel,
   type ListType,
-} from "./editor-commands";
-import EditorToolbar from "./editor-toolbar";
+} from "../editor-commands";
+import EditorToolbar from "../editor-toolbar";
 
 type EditorToolbarState = ComponentProps<typeof EditorToolbar>["activeState"];
 

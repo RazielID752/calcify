@@ -2,38 +2,38 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import DocumentLibraryDialog from "./document-library-dialog";
-import DocumentTabsBar from "./document-tabs-bar";
+import DocumentLibraryDialog from "../document-library-dialog";
+import DocumentTabsBar from "../document-tabs-bar";
 import {
   type AlignType,
   editorCommands,
   type HeadingLevel,
   type ListType,
   mathOptions,
-} from "./editor-commands";
-import EditorDialogsStack from "./editor-dialogs-stack";
-import { DEFAULT_DOCUMENT_TITLE, type Document } from "./editor-document";
+} from "../editor-commands";
+import EditorDialogsStack from "../editor-dialogs-stack";
+import { DEFAULT_DOCUMENT_TITLE, type Document } from "../editor-document";
 import EditorDocumentOutline, {
   type EditorOutlineItem,
-} from "./editor-document-outline";
-import EditorFormattingToolbar from "./editor-formatting-toolbar";
-import EditorQuickMenu from "./editor-quick-menu";
-import EditorWritingSurface from "./editor-writing-surface";
-import { useActiveEditorDocument } from "./hooks/use-active-editor-document";
-import { useAutoTransforms } from "./hooks/use-auto-transforms";
-import { useBlockDragAndDrop } from "./hooks/use-block-drag-and-drop";
-import { useEditorAccountSync } from "./hooks/use-editor-account-sync";
-import { useEditorContentHandlers } from "./hooks/use-editor-content-handlers";
-import { useEditorDialogs } from "./hooks/use-editor-dialogs";
-import { useEditorDocumentActions } from "./hooks/use-editor-document-actions";
-import { useEditorDocuments } from "./hooks/use-editor-documents";
-import { useEditorEmptyState } from "./hooks/use-editor-empty-state";
-import { useEditorHelpDialog } from "./hooks/use-editor-help-dialog";
-import { useEditorMarkdownShortcut } from "./hooks/use-editor-markdown-shortcut";
-import { useEditorSession } from "./hooks/use-editor-session";
-import { useEditorToolbarState } from "./hooks/use-editor-toolbar-state";
-import { useMarkdownRenderer } from "./hooks/use-markdown-renderer";
-import ZoomControls from "./zoom-controls";
+} from "../editor-document-outline";
+import EditorFormattingToolbar from "../editor-formatting-toolbar";
+import EditorQuickMenu from "../editor-quick-menu";
+import EditorWritingSurface from "../editor-writing-surface";
+import { useActiveEditorDocument } from "../hooks/use-active-editor-document";
+import { useAutoTransforms } from "../hooks/use-auto-transforms";
+import { useBlockDragAndDrop } from "../hooks/use-block-drag-and-drop";
+import { useEditor } from "../hooks/use-editor";
+import { useEditorContentHandlers } from "../hooks/use-editor-content-handlers";
+import { useEditorDialogs } from "../hooks/use-editor-dialogs";
+import { useEditorDocumentActions } from "../hooks/use-editor-document-actions";
+import { useEditorDocuments } from "../hooks/use-editor-documents";
+import { useEditorEmptyState } from "../hooks/use-editor-empty-state";
+import { useEditorHelpDialog } from "../hooks/use-editor-help-dialog";
+import { useEditorMarkdownShortcut } from "../hooks/use-editor-markdown-shortcut";
+import { useEditorSession } from "../hooks/use-editor-session";
+import { useEditorToolbarState } from "../hooks/use-editor-toolbar-state";
+import { useMarkdownRenderer } from "../hooks/use-markdown-renderer";
+import ZoomControls from "../zoom-controls";
 
 export default function Editor() {
   const router = useRouter();
@@ -119,7 +119,7 @@ export default function Editor() {
     isLogoutSubmitting,
     scheduleAutosave,
     setIsLogoutDialogOpen,
-  } = useEditorAccountSync({
+  } = useEditor({
     documents,
     setDocuments,
     hadStoredDocuments,

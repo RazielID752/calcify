@@ -1,6 +1,6 @@
-import type { LoginFormValues } from "@/app/site/form";
+import type { LoginFormValues } from "@/app/forms/auth";
 import { apiClient } from "@/utils/api-client";
-import type { LoginApiResponse } from "@/utils/auth-api";
+import type { LoginApiResponse } from "@/app/interfaces/auth";
 
 export const loginRequest = (values: LoginFormValues) =>
 	apiClient.post<LoginApiResponse>("/api/auth/login", {

@@ -1,9 +1,11 @@
-type LoginCredentials = {
+import { apiClient, getApiErrorMessage, resolveApiBaseUrl } from "./api-client";
+
+export type LoginCredentials = {
   login: string;
   password: string;
 };
 
-type LoginApiResponse = {
+export type LoginApiResponse = {
   token: string;
   expiresIn: number;
   user: {
@@ -54,15 +56,8 @@ type SpellcheckRuleApiResponse = {
   createdAt: string;
 };
 
-const DEFAULT_API_BASE_URL = "https://api-calcify-production.up.railway.app";
 const GUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const resolveApiBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(
-    /\/+$/,
-    "",
-  );
 
 const readField = <T>(
   source: Record<string, unknown>,
@@ -155,35 +150,27 @@ export class ApiRequestError extends Error {
 }
 
 export async function loginWithApi(credentials: LoginCredentials) {
-  const response = await fetch(`${resolveApiBaseUrl()}/api/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email: credentials.login.trim(),
-      password: credentials.password,
-    }),
-  });
+  try {
+    const response = await apiClient.post<Partial<LoginApiResponse>>(
+      "/api/auth/login",
+      {
+        email: credentials.login.trim(),
+        password: credentials.password,
+      },
+    );
 
-  const data = (await response.json().catch(() => ({}))) as
-    | Partial<LoginApiResponse>
-    | { message?: string };
+    const payload = response.data;
 
-  if (!response.ok) {
-    const message =
-      (data as { message?: string }).message ??
-      "Não foi possível realizar o login.";
-    throw new Error(message);
+    if (!payload.token || !payload.user) {
+      throw new Error("Resposta de login inválida.");
+    }
+
+    return payload as LoginApiResponse;
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(error, "Não foi possível realizar o login."),
+    );
   }
-
-  const payload = data as Partial<LoginApiResponse>;
-
-  if (!payload.token || !payload.user) {
-    throw new Error("Resposta de login inválida.");
-  }
-
-  return payload as LoginApiResponse;
 }
 
 export async function logoutWithApi(token: string) {

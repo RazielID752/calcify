@@ -1,5 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
-import { productGridItems } from "./site-data";
+import { productGridItems } from "../site-data";
 
 const useCases = [
   "orçamentos",

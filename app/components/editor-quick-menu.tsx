@@ -117,7 +117,7 @@ export default function EditorQuickMenu({
             variant="ghost"
             className="w-full justify-start gap-2 text-zinc-700 hover:bg-zinc-100"
           >
-            <Link href="/site" onClick={() => setIsOpen(false)}>
+            <Link href="/" onClick={() => setIsOpen(false)}>
               <Globe2 className="size-4" />
               Ir para o site
             </Link>

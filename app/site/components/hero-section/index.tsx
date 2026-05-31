@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import KeyboardHeroBackground from "./keyboard-hero-background";
 import ProductScene from "./product-scene";
-import { heroStats } from "./site-data";
+import { heroStats } from "../site-data";
 
 export default function HeroSection() {
   return (
@@ -31,7 +31,7 @@ export default function HeroSection() {
               size="lg"
               className="h-12 gap-2 rounded-md bg-zinc-950 px-5 text-white"
             >
-              <Link href="/">
+              <Link href="/editor">
                 Abrir editor
                 <ArrowRight className="size-4" />
               </Link>

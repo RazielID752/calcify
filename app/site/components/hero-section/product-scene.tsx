@@ -258,33 +258,17 @@ export default function ProductScene() {
                 <div className="calcify-result-pulse mt-5 rounded-[6px] border border-zinc-300 bg-zinc-100 px-3 py-2 font-mono text-[0.875em] text-zinc-800">
                   120 USD → BRL 596.40
                 </div>
-                <p className="mt-5 text-base leading-[1.6] text-zinc-700">
-                  Estimativa final: <strong>596.40 + 89.90 + 49.90</strong>
+
+                <p className="mt-6 text-base leading-[1.7] text-zinc-700">
+                  Depois disso, criar a documentação e exportar o resumo em
+                  markdown fica simples.
                 </p>
-                <pre className="mt-6 overflow-x-auto rounded-xl bg-zinc-950 p-4 text-zinc-100">
-                  <code>Resultado automático: R$ 736,20</code>
-                </pre>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="absolute bottom-5 left-4 sm:left-6">
-          <div className="mb-2 w-56 rounded-xl border border-zinc-200 bg-white/95 p-2 shadow-lg backdrop-blur">
-            {menuItems.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-zinc-700"
-              >
-                <item.icon className="size-4 text-emerald-600" />
-                {item.label}
-              </div>
-            ))}
-          </div>
-          <div className="flex size-10 items-center justify-center rounded-full border border-zinc-200 bg-white/95 text-emerald-600 shadow-sm backdrop-blur-sm">
-            <Menu className="size-5" />
-          </div>
-        </div>
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgb(255_255_255/0)_0%,rgb(255_255_255/0.88)_72%,rgb(255_255_255/1)_100%)]" />
       </div>
     </div>
   );

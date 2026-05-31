@@ -1,5 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
-import { qualityItems, trustItems } from "./site-data";
+import { qualityItems, trustItems } from "../site-data";
 
 export default function SyncSection() {
   return (

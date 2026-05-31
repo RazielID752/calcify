@@ -1,4 +1,4 @@
-import { featureHighlights } from "./site-data";
+import { featureHighlights } from "../site-data";
 
 export default function FeaturesSection() {
   return (

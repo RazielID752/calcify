@@ -1,6 +1,5 @@
 import EditorHelpDialog from "./editor-help-dialog";
 import EditorImportDialog from "./editor-import-dialog";
-import EditorLoginDialog from "./editor-login-dialog";
 import EditorLogoutDialog from "./editor-logout-dialog";
 import ImageDialog from "./image-dialog";
 import LinkDialog from "./link-dialog";
@@ -10,16 +9,12 @@ type EditorDialogsStackProps = {
   importDialogOpen: boolean;
   linkDialogOpen: boolean;
   linkUrl: string;
-  loginDialogOpen: boolean;
-  loginErrorMessage: string;
   logoutDialogOpen: boolean;
   openHelpDialog: boolean;
   openLinkInNewTab: boolean;
-  isLoginSubmitting: boolean;
   isLogoutSubmitting: boolean;
   onApplyLink: () => void;
   onConfirmLogout: () => void;
-  onContinueLogin: (credentials: { login: string; password: string }) => void;
   onHelpDialogOpenChange: (open: boolean) => void;
   onImageDialogOpenChange: (open: boolean) => void;
   onImportDialogOpenChange: (open: boolean) => void;
@@ -27,7 +22,6 @@ type EditorDialogsStackProps = {
   onInsertImage: (url: string) => void;
   onLinkDialogOpenChange: (open: boolean) => void;
   onLinkUrlChange: (url: string) => void;
-  onLoginDialogOpenChange: (open: boolean) => void;
   onLogoutDialogOpenChange: (open: boolean) => void;
   onOpenLinkInNewTabChange: (open: boolean) => void;
   onRemoveImage: () => void;
@@ -39,16 +33,12 @@ export default function EditorDialogsStack({
   importDialogOpen,
   linkDialogOpen,
   linkUrl,
-  loginDialogOpen,
-  loginErrorMessage,
   logoutDialogOpen,
   openHelpDialog,
   openLinkInNewTab,
-  isLoginSubmitting,
   isLogoutSubmitting,
   onApplyLink,
   onConfirmLogout,
-  onContinueLogin,
   onHelpDialogOpenChange,
   onImageDialogOpenChange,
   onImportDialogOpenChange,
@@ -56,7 +46,6 @@ export default function EditorDialogsStack({
   onInsertImage,
   onLinkDialogOpenChange,
   onLinkUrlChange,
-  onLoginDialogOpenChange,
   onLogoutDialogOpenChange,
   onOpenLinkInNewTabChange,
   onRemoveImage,
@@ -85,14 +74,6 @@ export default function EditorDialogsStack({
       <EditorHelpDialog
         open={openHelpDialog}
         onOpenChange={onHelpDialogOpenChange}
-      />
-
-      <EditorLoginDialog
-        open={loginDialogOpen}
-        onOpenChange={onLoginDialogOpenChange}
-        onContinueLogin={onContinueLogin}
-        isSubmitting={isLoginSubmitting}
-        errorMessage={loginErrorMessage}
       />
 
       <EditorLogoutDialog

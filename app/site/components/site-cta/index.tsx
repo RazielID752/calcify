@@ -20,7 +20,7 @@ export default function SiteCta() {
             size="lg"
             className="h-12 gap-2 rounded-md bg-zinc-950 px-5 text-white"
           >
-            <Link href="/">
+            <Link href="/editor">
               Começar agora
               <ArrowRight className="size-4" />
             </Link>

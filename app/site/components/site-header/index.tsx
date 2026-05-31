@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import icon from "@/assets/icon-big.png";
-import { navItems } from "./site-data";
+import { navItems } from "../site-data";
 
 export default function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -14,7 +14,7 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-30 border-zinc-200/70 border-b bg-white/[0.82] backdrop-blur-2xl">
       <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
-          href="/site"
+          href="/"
           className="flex items-center gap-2.5 font-semibold text-zinc-950"
           aria-label="Calcify"
           onClick={() => setIsMenuOpen(false)}
@@ -43,7 +43,7 @@ export default function SiteHeader() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/"
+            href="/editor"
             className="hidden h-9 items-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white shadow-sm shadow-zinc-950/10 transition-colors hover:bg-zinc-800 sm:inline-flex"
           >
             Abrir editor
@@ -83,7 +83,7 @@ export default function SiteHeader() {
             </a>
           ))}
           <Link
-            href="/"
+            href="/editor"
             className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
             onClick={() => setIsMenuOpen(false)}
           >

@@ -1,4 +1,4 @@
-import { workflowItems } from "./site-data";
+import { workflowItems } from "../site-data";
 
 export default function WorkflowSection() {
   return (

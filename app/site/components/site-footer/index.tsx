@@ -2,11 +2,11 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import icon from "@/assets/icon-big.png";
-import { navItems } from "./site-data";
+import { navItems } from "../site-data";
 
 const productMarks = ["Markdown", "Cálculos", "Conversões", "Biblioteca"];
 
-const footerLinks = [{ label: "Editor", href: "/" }, ...navItems];
+const footerLinks = [{ label: "Editor", href: "/editor" }, ...navItems];
 
 export default function SiteFooter() {
   return (
@@ -14,7 +14,7 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
           <div>
-            <Link href="/site" className="inline-flex items-center">
+            <Link href="/" className="inline-flex items-center">
               <Image
                 src={icon}
                 alt="Calcify"
@@ -62,7 +62,7 @@ export default function SiteFooter() {
                 editor trabalhando junto com o texto.
               </p>
               <Link
-                href="/"
+                href="/editor"
                 className="mt-5 inline-flex h-10 items-center gap-2 rounded-md bg-white px-4 text-sm font-medium text-zinc-950 transition-colors hover:bg-zinc-200"
               >
                 Abrir editor

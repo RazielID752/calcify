@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import DocumentLibraryDialog from "./document-library-dialog";
 import DocumentTabsBar from "./document-tabs-bar";
@@ -35,6 +36,7 @@ import { useMarkdownRenderer } from "./hooks/use-markdown-renderer";
 import ZoomControls from "./zoom-controls";
 
 export default function Editor() {
+  const router = useRouter();
   const {
     documents,
     setDocuments,
@@ -111,19 +113,12 @@ export default function Editor() {
     authToken,
     flushAutosave,
     handleConfirmLogout,
-    handleContinueLogin,
-    handleLogin,
     handleLogoutRequest,
     handleSaveDocument,
-    isLoginDialogOpen,
-    isLoginSubmitting,
     isLogoutDialogOpen,
     isLogoutSubmitting,
-    loginErrorMessage,
     scheduleAutosave,
-    setIsLoginDialogOpen,
     setIsLogoutDialogOpen,
-    setLoginErrorMessage,
   } = useEditorAccountSync({
     documents,
     setDocuments,
@@ -466,7 +461,7 @@ export default function Editor() {
         onExport={handleExportDocument}
         onImportMd={handleOpenImportDialog}
         onOpenGithub={handleOpenGithub}
-        onLoginRequest={handleLogin}
+        onLoginRequest={() => router.push("/login?next=/editor")}
         onLogoutRequest={handleLogoutRequest}
       />
 
@@ -566,16 +561,12 @@ export default function Editor() {
             importDialogOpen={isImportDialogOpen}
             linkDialogOpen={isLinkDialogOpen}
             linkUrl={linkUrl}
-            loginDialogOpen={isLoginDialogOpen}
-            loginErrorMessage={loginErrorMessage}
             logoutDialogOpen={isLogoutDialogOpen}
             openHelpDialog={isHelpDialogOpen}
             openLinkInNewTab={openLinkInNewTab}
-            isLoginSubmitting={isLoginSubmitting}
             isLogoutSubmitting={isLogoutSubmitting}
             onApplyLink={handleApplyLink}
             onConfirmLogout={handleConfirmLogout}
-            onContinueLogin={handleContinueLogin}
             onHelpDialogOpenChange={setIsHelpDialogOpen}
             onImageDialogOpenChange={setIsImageDialogOpen}
             onImportDialogOpenChange={setIsImportDialogOpen}
@@ -583,12 +574,6 @@ export default function Editor() {
             onInsertImage={handleInsertImage}
             onLinkDialogOpenChange={setIsLinkDialogOpen}
             onLinkUrlChange={setLinkUrl}
-            onLoginDialogOpenChange={(open) => {
-              setIsLoginDialogOpen(open);
-              if (!open) {
-                setLoginErrorMessage("");
-              }
-            }}
             onLogoutDialogOpenChange={setIsLogoutDialogOpen}
             onOpenLinkInNewTabChange={setOpenLinkInNewTab}
             onRemoveImage={handleRemoveImage}

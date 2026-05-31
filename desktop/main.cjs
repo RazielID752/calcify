@@ -254,7 +254,7 @@ async function createMainWindow() {
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
     const appUrl = await startStaticServer();
-    await mainWindow.loadURL(appUrl);
+    await mainWindow.loadURL(`${appUrl}/editor`);
   }
 
   mainWindow.on("closed", () => {

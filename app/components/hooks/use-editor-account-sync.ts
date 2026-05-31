@@ -19,6 +19,12 @@ import {
   upsertDocumentWithApi,
 } from "@/utils/auth-api";
 import {
+  AUTH_TOKEN_STORAGE_KEY,
+  AUTH_USER_STORAGE_KEY,
+  clearAuthSession,
+  persistAuthSession,
+} from "@/utils/auth-session";
+import {
   createDocumentId,
   DEFAULT_DOCUMENT_TITLE,
   type Document,
@@ -28,8 +34,6 @@ import {
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 const AUTOSAVE_RETRY_BASE_MS = 2000;
 const AUTOSAVE_RETRY_MAX_MS = 30000;
-const AUTH_TOKEN_STORAGE_KEY = "calcify_auth_token_v1";
-const AUTH_USER_STORAGE_KEY = "calcify_auth_user_v1";
 const DOCUMENTS_STORAGE_KEY = "calcify_documents_v1";
 const ACTIVE_DOCUMENT_ID_STORAGE_KEY = "calcify_active_document_id_v1";
 
@@ -827,11 +831,7 @@ export const useEditorAccountSync = ({
 
       try {
         const response = await loginWithApi(credentials);
-        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.token);
-        localStorage.setItem(
-          AUTH_USER_STORAGE_KEY,
-          JSON.stringify(response.user),
-        );
+        persistAuthSession(response);
         setAuthToken(response.token);
         setAuthenticatedUser(response.user);
         setIsLoginDialogOpen(false);
@@ -865,8 +865,7 @@ export const useEditorAccountSync = ({
         });
       }
     } finally {
-      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-      localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+      clearAuthSession();
       localStorage.removeItem(DOCUMENTS_STORAGE_KEY);
       localStorage.removeItem(ACTIVE_DOCUMENT_ID_STORAGE_KEY);
       localStorage.setItem(FIRST_ACCESS_WELCOME_KEY, "1");

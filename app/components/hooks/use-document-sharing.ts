@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import type {
   DocumentGeneralAccess,
   DocumentShareSettings,
@@ -59,6 +60,7 @@ export const useDocumentSharing = ({
     }
 
     setIsLoadingShareSettings(true);
+    const loadingToastId = toast.loading("Carregando permissões...");
 
     try {
       const settings = await fetchDocumentShareSettingsWithApi(
@@ -68,11 +70,22 @@ export const useDocumentSharing = ({
       setActiveSettings(settings);
     } catch (error) {
       if (error instanceof ApiRequestError && error.status === 401) {
+        toast.dismiss(loadingToastId);
         onAuthExpired();
+        return;
       }
+
+      const message =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "Não foi possível carregar as permissões.";
+      toast.error(message, { id: loadingToastId });
+      return;
     } finally {
       setIsLoadingShareSettings(false);
     }
+
+    toast.dismiss(loadingToastId);
   }, [activeDocumentId, authToken, onAuthExpired]);
 
   useEffect(() => {
@@ -100,6 +113,11 @@ export const useDocumentSharing = ({
           return;
         }
 
+        const message =
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : "Não foi possível atualizar o acesso.";
+        toast.error(message);
         await loadShareSettings();
       }
     },
@@ -136,13 +154,14 @@ export const useDocumentSharing = ({
           return { ok: false, message: "Sua sessão expirou." };
         }
 
-        return {
-          ok: false,
-          message:
-            error instanceof Error && error.message.trim().length > 0
-              ? error.message
-              : "Não foi possível compartilhar o documento.",
-        };
+        const message =
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : "Não foi possível compartilhar o documento.";
+
+        toast.error(message);
+
+        return { ok: false, message };
       }
     },
     [activeDocumentId, authToken, onAuthExpired],

@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   Save,
+  Share2,
   Upload,
   X,
 } from "lucide-react";
@@ -27,6 +28,7 @@ type EditorQuickMenuProps = {
   onExportPdf: () => void;
   onImportMd: () => void;
   onOpenGithub: () => void;
+  onOpenShare: () => void;
   onLoginRequest: () => void;
   onLogoutRequest: () => void;
 };
@@ -40,6 +42,7 @@ export default function EditorQuickMenu({
   onExportPdf,
   onImportMd,
   onOpenGithub,
+  onOpenShare,
   onLoginRequest,
   onLogoutRequest,
 }: EditorQuickMenuProps) {
@@ -124,6 +127,16 @@ export default function EditorQuickMenu({
               <Globe2 className="size-4" />
               Ir para o site
             </Link>
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-start gap-2 text-zinc-700 hover:bg-zinc-100"
+            onClick={() => handleMenuAction(onOpenShare)}
+          >
+            <Share2 className="size-4" />
+            Compartilhar
           </Button>
 
           <Button

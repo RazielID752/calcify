@@ -3,6 +3,7 @@ import DesktopDownloadSection from "./site/components/desktop-download-section";
 import FeaturesSection from "./site/components/features-section";
 import HeroSection from "./site/components/hero-section";
 import ProductGridSection from "./site/components/product-grid-section";
+import PricingSection from "./site/components/pricing-section";
 import SiteCta from "./site/components/site-cta";
 import SiteFooter from "./site/components/site-footer";
 import SiteHeader from "./site/components/site-header";
@@ -23,6 +24,7 @@ export default function SitePage() {
       <FeaturesSection />
       <ProductGridSection />
       <WorkflowSection />
+      <PricingSection />
       <SyncSection />
       <DesktopDownloadSection />
       <SiteCta />

@@ -90,8 +90,34 @@ export const navItems = [
   { label: "Recursos", href: "#recursos" },
   { label: "Fluxo", href: "#fluxo" },
   { label: "Produto", href: "#produto" },
+  { label: "Plano", href: "#plano" },
   { label: "Download", href: "#download" },
   { label: "Por que Calcify", href: "#diferencial" },
+];
+
+export const whatsappContactUrl = "https://wa.me/+5521974131359?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20o%20Calcify!";
+
+export const pricingPlan = {
+  price: "23,99",
+  cadence: "mensal",
+  tagline: "Um plano unico, sem camadas escondidas.",
+  ctaLabel: "Entre em contato",
+  bullets: [
+    "Acesso completo ao editor Calcify",
+    "Calculos e conversoes dentro do texto",
+    "Exportacao em Markdown e PDF",
+    "Biblioteca e abas para organizar documentos",
+    "Suporte direto com o time do produto",
+  ],
+};
+
+export const pricingFeatures = [
+  "Editor limpo com atalhos inteligentes",
+  "Markdown que vira documento pronto",
+  "Exportacao em Markdown e PDF",
+  "Sincronizacao para continuar de onde parou",
+  "Calculos no meio do texto para manter o raciocinio junto do numero",
+  "Conversoes de moedas e unidades sem sair do editor",
 ];
 
 export const productGridItems = [

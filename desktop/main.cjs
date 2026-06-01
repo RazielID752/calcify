@@ -240,7 +240,7 @@ async function createMainWindow() {
     minWidth: 960,
     minHeight: 640,
     autoHideMenuBar: true,
-    backgroundColor: "#0b1220",
+    backgroundColor: "#f6f8f5",
     icon: APP_ICON_PATH,
     webPreferences: {
       nodeIntegration: false,
@@ -254,7 +254,7 @@ async function createMainWindow() {
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
     const appUrl = await startStaticServer();
-    await mainWindow.loadURL(`${appUrl}/editor`);
+    await mainWindow.loadURL(`${appUrl}/desktop`);
   }
 
   mainWindow.on("closed", () => {

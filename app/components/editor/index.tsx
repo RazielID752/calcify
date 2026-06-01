@@ -1,7 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type MouseEvent, useCallback, useEffect, useState } from "react";
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { toast } from "sonner";
+import {
+  ApiRequestError,
+  fetchDocumentWithApi,
+} from "@/app/services/document.service";
 import DocumentLibraryDialog from "../document-library-dialog";
 import DocumentTabsBar from "../document-tabs-bar";
 import EditorBlockActionMenu, {
@@ -30,6 +42,7 @@ import {
   BLOCK_ACTION_PLACEHOLDER_SELECTOR,
   useBlockDragAndDrop,
 } from "../hooks/use-block-drag-and-drop";
+import { useDocumentSharing } from "../hooks/use-document-sharing";
 import { useEditor } from "../hooks/use-editor";
 import { useEditorContentHandlers } from "../hooks/use-editor-content-handlers";
 import { useEditorDialogs } from "../hooks/use-editor-dialogs";
@@ -195,6 +208,7 @@ export default function Editor() {
 
   const [zoom, setZoom] = useState(100);
   const [isDocumentLibraryOpen, setIsDocumentLibraryOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [blockActionMenuTop, setBlockActionMenuTop] = useState<number | null>(
     null,
   );
@@ -202,6 +216,7 @@ export default function Editor() {
   const [activeOutlineItemIndex, setActiveOutlineItemIndex] = useState(
     EMPTY_OUTLINE_ITEM_INDEX,
   );
+  const requestedSharedDocumentIdsRef = useRef(new Set<string>());
   const { handleOpenHelpFromMenu, isHelpDialogOpen, setIsHelpDialogOpen } =
     useEditorHelpDialog();
 
@@ -237,6 +252,13 @@ export default function Editor() {
   const getCurrentEditorHtml = useCallback(
     () => editorRef.current?.innerHTML ?? "",
     [editorRef],
+  );
+
+  const activeDocument = useMemo(
+    () =>
+      documents.find((documentItem) => documentItem.id === activeDocumentId) ??
+      null,
+    [activeDocumentId, documents],
   );
 
   const { recordHistorySnapshot, redoHistory, resetHistory, undoHistory } =
@@ -282,6 +304,92 @@ export default function Editor() {
     closeDocumentLocally: handleCloseDocumentLocal,
     persistCurrentDocumentHtml,
   });
+
+  const {
+    activeSettings,
+    inviteEditor,
+    isLoadingShareSettings,
+    loadShareSettings,
+    setGeneralAccess,
+    shareLink,
+  } = useDocumentSharing({
+    activeDocumentId,
+    authToken,
+    onAuthExpired: handleExpiredSession,
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const sharedDocumentId = new URLSearchParams(window.location.search).get(
+      "document",
+    );
+
+    if (!sharedDocumentId?.trim()) {
+      return;
+    }
+
+    const existingDocument = documents.find(
+      (documentItem) => documentItem.id === sharedDocumentId,
+    );
+
+    if (existingDocument) {
+      setActiveDocumentId(existingDocument.id);
+      return;
+    }
+
+    if (
+      !authToken ||
+      requestedSharedDocumentIdsRef.current.has(sharedDocumentId)
+    ) {
+      return;
+    }
+
+    requestedSharedDocumentIdsRef.current.add(sharedDocumentId);
+
+    void fetchDocumentWithApi(authToken, sharedDocumentId)
+      .then((documentItem) => {
+        setDocuments((previousDocuments) => {
+          if (
+            previousDocuments.some(
+              (previousDocument) => previousDocument.id === documentItem.id,
+            )
+          ) {
+            return previousDocuments;
+          }
+
+          return [
+            ...previousDocuments,
+            {
+              id: documentItem.id,
+              clientDocumentId: documentItem.clientDocumentId ?? null,
+              title: documentItem.title.trim() || DEFAULT_DOCUMENT_TITLE,
+              content: documentItem.content ?? "",
+              createdAt: new Date(documentItem.createdAt),
+              serverUpdatedAt: documentItem.updatedAt,
+              titleMode: "manual" as const,
+            },
+          ];
+        });
+        setActiveDocumentId(documentItem.id);
+      })
+      .catch((error) => {
+        if (error instanceof ApiRequestError && error.status === 401) {
+          handleExpiredSession();
+          return;
+        }
+
+        toast.error("Não foi possível abrir o documento compartilhado.");
+      });
+  }, [
+    authToken,
+    documents,
+    handleExpiredSession,
+    setActiveDocumentId,
+    setDocuments,
+  ]);
 
   const applyActiveDocumentHtml = useCallback(
     (nextHtml: string) => {
@@ -822,6 +930,20 @@ export default function Editor() {
     [flushAutosave, handleCloseDocumentLocal, persistCurrentDocumentHtml],
   );
 
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      toast.success("Link copiado.");
+    } catch {
+      toast.error("Não foi possível copiar o link.");
+    }
+  }, [shareLink]);
+
+  const handleOpenShareDialog = useCallback(() => {
+    void handleSaveDocument().then(loadShareSettings);
+    setIsShareDialogOpen(true);
+  }, [handleSaveDocument, loadShareSettings]);
+
   const handleIncreaseZoom = () => {
     setZoom((prev) => Math.min(prev + 10, 200));
   };
@@ -859,6 +981,7 @@ export default function Editor() {
         onExportPdf={handleExportPdf}
         onImportMd={handleOpenImportDialog}
         onOpenGithub={handleOpenGithub}
+        onOpenShare={handleOpenShareDialog}
         onLoginRequest={() => router.push("/login?next=/editor")}
         onLogoutRequest={handleLogoutRequest}
       />
@@ -970,6 +1093,9 @@ export default function Editor() {
           ) : null}
 
           <EditorDialogsStack
+            activeDocumentTitle={
+              activeDocument?.title.trim() || DEFAULT_DOCUMENT_TITLE
+            }
             imageDialogOpen={isImageDialogOpen}
             importDialogOpen={isImportDialogOpen}
             linkDialogOpen={isLinkDialogOpen}
@@ -977,20 +1103,37 @@ export default function Editor() {
             logoutDialogOpen={isLogoutDialogOpen}
             openHelpDialog={isHelpDialogOpen}
             openLinkInNewTab={openLinkInNewTab}
+            openShareDialog={isShareDialogOpen}
             isLogoutSubmitting={isLogoutSubmitting}
+            isShareLoading={isLoadingShareSettings}
+            shareLink={shareLink}
+            shareOwner={
+              activeSettings.owner ??
+              (authenticatedUser
+                ? {
+                    name: authenticatedUser.name,
+                    email: authenticatedUser.email,
+                  }
+                : null)
+            }
+            shareSettings={activeSettings}
             onApplyLink={handleApplyLink}
             onConfirmLogout={handleConfirmLogout}
+            onCopyShareLink={handleCopyShareLink}
+            onGeneralShareAccessChange={setGeneralAccess}
             onHelpDialogOpenChange={setIsHelpDialogOpen}
             onImageDialogOpenChange={setIsImageDialogOpen}
             onImportDialogOpenChange={setIsImportDialogOpen}
             onImportMarkdown={handleImportMarkdownDocument}
             onInsertImage={handleInsertImage}
+            onInviteShareEditor={inviteEditor}
             onLinkDialogOpenChange={setIsLinkDialogOpen}
             onLinkUrlChange={setLinkUrl}
             onLogoutDialogOpenChange={setIsLogoutDialogOpen}
             onOpenLinkInNewTabChange={setOpenLinkInNewTab}
             onRemoveImage={handleRemoveImage}
             onRemoveLink={handleRemoveLink}
+            onShareDialogOpenChange={setIsShareDialogOpen}
           />
         </div>
       </div>

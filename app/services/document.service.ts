@@ -1,4 +1,9 @@
 import type {
+  DocumentGeneralAccess,
+  DocumentSharedUser,
+  DocumentShareSettings,
+} from "@/app/interfaces/document-sharing";
+import type {
   DocumentApiResponse,
   DocumentListApiResponse,
   UpsertDocumentOptions,
@@ -55,6 +60,77 @@ const normalizeDocumentResponse = (
     isDraft,
     createdAt,
     updatedAt,
+  };
+};
+
+const normalizeShareAccess = (value: unknown): DocumentGeneralAccess =>
+  value === "public" ? "public" : "private";
+
+const normalizeDocumentShareSettings = (
+  value: unknown,
+): DocumentShareSettings => {
+  const fallback: DocumentShareSettings = {
+    generalAccess: "private",
+    owner: null,
+    users: [],
+  };
+
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const record = value as Record<string, unknown>;
+  const owner = readField<Record<string, unknown>>(record, "owner", "Owner");
+  const rawUsers = readField<unknown[]>(record, "users", "Users");
+  const rawGeneralAccess = readField<unknown>(
+    record,
+    "generalAccess",
+    "GeneralAccess",
+  );
+
+  return {
+    generalAccess: normalizeShareAccess(rawGeneralAccess),
+    owner:
+      owner &&
+      typeof owner.id === "string" &&
+      typeof owner.name === "string" &&
+      typeof owner.email === "string"
+        ? {
+            id: owner.id,
+            name: owner.name,
+            email: owner.email,
+          }
+        : null,
+    users: Array.isArray(rawUsers)
+      ? rawUsers
+          .map((user): DocumentSharedUser | null => {
+            if (!user || typeof user !== "object") {
+              return null;
+            }
+
+            const userRecord = user as Record<string, unknown>;
+            const id = readField<string>(userRecord, "id", "Id");
+            const email = readField<string>(userRecord, "email", "Email");
+            const name = readField<string>(userRecord, "name", "Name");
+            const access = readField<string>(userRecord, "access", "Access");
+
+            if (
+              typeof id !== "string" ||
+              typeof email !== "string" ||
+              typeof name !== "string"
+            ) {
+              return null;
+            }
+
+            return {
+              id,
+              email,
+              name,
+              access: access === "editor" ? "editor" : "editor",
+            };
+          })
+          .filter((user): user is DocumentSharedUser => user !== null)
+      : [],
   };
 };
 
@@ -325,4 +401,93 @@ export async function deleteDocumentWithApi(token: string, documentId: string) {
     data.message ?? data.Message ?? "Não foi possível excluir o documento.",
     response.status,
   );
+}
+
+export async function fetchDocumentShareSettingsWithApi(
+  token: string,
+  documentId: string,
+) {
+  const response = await fetch(
+    `${resolveApiBaseUrl()}/api/documents/${documentId}/share`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      (data as { message?: string; Message?: string }).message ??
+        (data as { message?: string; Message?: string }).Message ??
+        "Não foi possível carregar o compartilhamento.",
+      response.status,
+    );
+  }
+
+  return normalizeDocumentShareSettings(data);
+}
+
+export async function updateDocumentShareAccessWithApi(
+  token: string,
+  documentId: string,
+  generalAccess: DocumentGeneralAccess,
+) {
+  const response = await fetch(
+    `${resolveApiBaseUrl()}/api/documents/${documentId}/share`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ generalAccess }),
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      (data as { message?: string; Message?: string }).message ??
+        (data as { message?: string; Message?: string }).Message ??
+        "Não foi possível atualizar o acesso.",
+      response.status,
+    );
+  }
+
+  return normalizeDocumentShareSettings(data);
+}
+
+export async function inviteDocumentEditorWithApi(
+  token: string,
+  documentId: string,
+  email: string,
+) {
+  const response = await fetch(
+    `${resolveApiBaseUrl()}/api/documents/${documentId}/share/invite`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ email }),
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      (data as { message?: string; Message?: string }).message ??
+        (data as { message?: string; Message?: string }).Message ??
+        "Não foi possível compartilhar o documento.",
+      response.status,
+    );
+  }
+
+  return normalizeDocumentShareSettings(data);
 }

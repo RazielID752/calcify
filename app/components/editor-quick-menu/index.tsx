@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { appVersionLabel } from "@/app/config/release";
 import { Button } from "@/components/ui/button";
 
 type EditorQuickMenuProps = {
@@ -220,6 +221,10 @@ export default function EditorQuickMenu({
             )}
             {currentUser ? "Sair" : "Login"}
           </Button>
+
+          <div className="mt-2 border-zinc-200 border-t px-3 pt-2 text-xs text-zinc-400">
+            Calcify {appVersionLabel}
+          </div>
         </div>
       ) : null}
 

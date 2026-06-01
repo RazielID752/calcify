@@ -1,0 +1,3 @@
+#!/bin/sh
+
+node scripts/ensure-release-for-commit.mjs

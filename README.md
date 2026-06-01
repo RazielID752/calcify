@@ -67,6 +67,50 @@ Observacao: como o projeto usa output export no Next, o build gera a pasta out, 
 
 ## Build
 
+## Release para producao
+
+Antes de subir qualquer alteracao para producao, gere uma nova versao:
+
+```bash
+pnpm release:patch
+```
+
+Use `patch` para correcoes e melhorias pequenas, `minor` para funcionalidades novas e `major` para mudancas incompatíveis:
+
+```bash
+pnpm release:minor
+pnpm release:major
+```
+
+O comando atualiza `package.json` e `app/config/release.json`. A versao exibida no editor, na secao de download e no endpoint desktop/latest passa a usar esses dados.
+
+Na Vercel, o build usa `pnpm build:vercel` via `vercel.json`. Em deploy de producao, esse comando verifica se a release foi gerada para o dia atual antes de permitir o build.
+
+Checklist antes de publicar em producao:
+
+```bash
+pnpm exec tsc --noEmit
+pnpm lint
+git add .
+git commit -m "sua mensagem"
+git push
+```
+
+O hook de `pre-commit` gera `release:patch` automaticamente quando voce esta na branch `main` e a release do dia ainda nao existe. Se precisar de `minor` ou `major`, rode manualmente antes do commit:
+
+```bash
+pnpm release:minor
+pnpm release:major
+```
+
+Para instalar ou reinstalar os hooks locais:
+
+```bash
+pnpm hooks:install
+```
+
+Nao rode o comando de release dentro da Vercel: o build da Vercel e temporario e nao salva alteracoes no repositorio.
+
 ### Build web
 
 ```bash
@@ -93,11 +137,16 @@ Saida em dist-desktop:
 
 - pnpm dev: inicia app web em desenvolvimento
 - pnpm build: gera build web (com export estatico)
+- pnpm build:vercel: valida release e gera build web na Vercel
 - pnpm start:desktop: abre Electron em modo producao local
 - pnpm dev:desktop: web dev + Electron juntos
 - pnpm build:desktop: build web + empacotamento desktop
 - pnpm lint: verifica padrao de codigo com Biome
 - pnpm format: formata o codigo com Biome
+- pnpm hooks:install: instala os hooks locais de Git do projeto
+- pnpm release:patch: gera uma nova versao patch antes do deploy em producao
+- pnpm release:minor: gera uma nova versao minor
+- pnpm release:major: gera uma nova versao major
 
 ## Como o desktop funciona
 

@@ -1,8 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import {
+  appRelease,
+  appVersionLabel,
+  getFormattedReleaseDate,
+} from "@/app/config/release";
 import appleLogo from "@/assets/Apple-logo.svg";
 import windowsLogo from "@/assets/Windows-logo.svg";
-import packageJson from "@/package.json";
 
 const macDownloadUrl =
   process.env.NEXT_PUBLIC_CALCIFY_MAC_DOWNLOAD_URL ??
@@ -35,7 +39,10 @@ export default function DesktopDownloadSection() {
                 Versão atual
               </p>
               <p className="mt-1 text-2xl font-semibold text-zinc-950">
-                v{packageJson.version}
+                {appVersionLabel}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                {appRelease.channel} · {getFormattedReleaseDate()}
               </p>
             </div>
           </div>
@@ -62,6 +69,14 @@ export default function DesktopDownloadSection() {
               O app verifica novas versões ao abrir e avisa quando houver uma
               atualização disponível. Você escolhe quando baixar e instalar.
             </p>
+            {appRelease.notesUrl ? (
+              <Link
+                href={appRelease.notesUrl}
+                className="mt-3 inline-flex text-sm font-medium text-emerald-700 underline-offset-4 hover:underline"
+              >
+                Ver notas da versão
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

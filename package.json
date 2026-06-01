@@ -10,8 +10,14 @@
     "dev:desktop": "concurrently -k \"pnpm dev\" \"wait-on http://localhost:3000 && cross-env ELECTRON_START_URL=http://localhost:3000/desktop electron .\"",
     "start:desktop": "cross-env NODE_ENV=production electron .",
     "build:desktop": "cross-env NEXT_OUTPUT_EXPORT=1 pnpm build && electron-builder",
+    "build:vercel": "node scripts/verify-release.mjs && next build",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "prepare": "node scripts/setup-git-hooks.mjs",
+    "hooks:install": "node scripts/setup-git-hooks.mjs",
+    "release:patch": "node scripts/create-release.mjs patch",
+    "release:minor": "node scripts/create-release.mjs minor",
+    "release:major": "node scripts/create-release.mjs major"
   },
   "dependencies": {
     "@cspell/dict-pt-br": "^2.4.2",

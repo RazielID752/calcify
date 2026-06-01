@@ -786,7 +786,7 @@ export default function AdminPageClient() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mt-2">
             <Input
               value={groupForm.name}
               placeholder="Nome do grupo"

@@ -6,7 +6,11 @@ import { navItems } from "../site-data";
 
 const productMarks = ["Markdown", "Cálculos", "Conversões", "Biblioteca"];
 
-const footerLinks = [{ label: "Editor", href: "/editor" }, ...navItems];
+const footerLinks = [
+  { label: "Editor", href: "/editor" },
+  { label: "Privacidade", href: "/privacidade" },
+  ...navItems,
+];
 
 export default function SiteFooter() {
   return (

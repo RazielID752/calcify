@@ -1,15 +1,19 @@
+import type { Perfis } from "@/enum/perfis.enum";
+
 export type LoginCredentials = {
-	login: string;
-	password: string;
+  login: string;
+  password: string;
 };
 
 export type LoginApiResponse = {
-	token: string;
-	expiresIn: number;
-	user: {
-		id: string;
-		name: string;
-		email: string;
-		lastLoginAt: string | null;
-	};
+  token: string;
+  expiresIn: number;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    lastLoginAt: string | null;
+    mustChangePassword?: boolean;
+    profile?: Perfis;
+  };
 };

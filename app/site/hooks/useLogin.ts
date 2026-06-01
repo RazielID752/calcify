@@ -1,22 +1,20 @@
 "use client";
 
 import axios from "axios";
-import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { LoginFormValues } from "@/app/forms/auth";
-import {
-  loginDefaultValues,
-  loginFormSchema,
-} from "@/app/forms/auth";
+import { loginDefaultValues, loginFormSchema } from "@/app/forms/auth";
+import useFetchStricht from "@/app/hooks/useFetchStricht";
+import useSonner from "@/app/hooks/useSonner";
 import type { LoginApiResponse } from "@/app/interfaces/auth";
+import { loginRequest } from "@/app/services/login.service";
 import {
+  getStoredAuthUser,
   hasStoredAuthSession,
   persistAuthSession,
 } from "@/utils/auth-session";
-import { loginRequest } from "@/app/services/login.service";
-import useFetchStricht from "@/app/hooks/useFetchStricht";
-import useSonner from "@/app/hooks/useSonner";
 
 type UseLoginOptions = {
   onError?: (message: string) => void;
@@ -33,7 +31,9 @@ const getRedirectTarget = () => {
   return target;
 };
 
-export default function useLogin({ onError: externalOnError }: UseLoginOptions = {}) {
+export default function useLogin({
+  onError: externalOnError,
+}: UseLoginOptions = {}) {
   const router = useRouter();
   const { error: showError, success: showSuccess } = useSonner();
   const form = useForm<LoginFormValues>({
@@ -43,6 +43,13 @@ export default function useLogin({ onError: externalOnError }: UseLoginOptions =
 
   useEffect(() => {
     if (hasStoredAuthSession()) {
+      if (getStoredAuthUser()?.mustChangePassword) {
+        router.replace(
+          `/change-password?next=${encodeURIComponent(getRedirectTarget())}`,
+        );
+        return;
+      }
+
       router.replace(getRedirectTarget());
     }
   }, [router]);
@@ -54,6 +61,13 @@ export default function useLogin({ onError: externalOnError }: UseLoginOptions =
       showSuccess("Login realizado com sucesso");
 
       window.setTimeout(() => {
+        if (response.data.user.mustChangePassword) {
+          router.replace(
+            `/change-password?next=${encodeURIComponent(getRedirectTarget())}`,
+          );
+          return;
+        }
+
         router.replace(getRedirectTarget());
       }, 250);
     },
@@ -62,9 +76,10 @@ export default function useLogin({ onError: externalOnError }: UseLoginOptions =
 
   const onError = useCallback(
     (message: string, error: unknown) => {
-      const errorMessage = axios.isAxiosError(error) && 
-      error.response?.status === 400 ?
-      "Usuário ou senha inválidos" : message;
+      const errorMessage =
+        axios.isAxiosError(error) && error.response?.status === 400
+          ? "Usuário ou senha inválidos"
+          : message;
 
       showError(errorMessage);
       externalOnError?.(errorMessage);

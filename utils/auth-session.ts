@@ -1,3 +1,5 @@
+import type { Perfis } from "@/enum/perfis.enum";
+
 export const AUTH_TOKEN_STORAGE_KEY = "calcify_auth_token_v1";
 export const AUTH_USER_STORAGE_KEY = "calcify_auth_user_v1";
 export const AUTH_SESSION_COOKIE_NAME = "calcify_auth_session_v1";
@@ -7,6 +9,26 @@ export type StoredAuthUser = {
   name: string;
   email: string;
   lastLoginAt: string | null;
+  mustChangePassword?: boolean;
+  profile?: Perfis;
+};
+
+export const getStoredAuthUser = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawUser = localStorage.getItem(AUTH_USER_STORAGE_KEY);
+
+    if (!rawUser) {
+      return null;
+    }
+
+    return JSON.parse(rawUser) as StoredAuthUser;
+  } catch {
+    return null;
+  }
 };
 
 export const hasStoredAuthSession = () => {

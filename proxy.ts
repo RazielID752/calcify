@@ -13,6 +13,13 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (nextUrl.pathname === "/change-password" && !hasSession) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", "/change-password");
+
+    return NextResponse.redirect(loginUrl);
+  }
+
   if (nextUrl.pathname === "/login" && hasSession) {
     return NextResponse.redirect(new URL("/editor", request.url));
   }
@@ -21,7 +28,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/editor/:path*", "/login"],
+  matcher: ["/editor/:path*", "/login", "/change-password"],
 };
 
 export default proxy;

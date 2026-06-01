@@ -1,6 +1,12 @@
 "use client";
 
-import { Copy, Globe2, LockKeyhole, SendHorizontal, Share2 } from "lucide-react";
+import {
+  Copy,
+  Globe2,
+  LockKeyhole,
+  SendHorizontal,
+  Share2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,7 +77,6 @@ export default function EditorShareDialog({
   const [errorMessage, setErrorMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
 
-
   useEffect(() => {
     if (!open) {
       setEmail("");
@@ -94,8 +99,6 @@ export default function EditorShareDialog({
     setEmail("");
     setErrorMessage("");
   };
-
-  
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -225,6 +228,12 @@ export default function EditorShareDialog({
                 )}
               </div>
             ))}
+
+            {isLoading ? (
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
+                Carregando permissões...
+              </div>
+            ) : null}
           </section>
 
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">

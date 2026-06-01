@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
-import { hasStoredAuthSession } from "@/utils/auth-session";
+import { getStoredAuthUser, hasStoredAuthSession } from "@/utils/auth-session";
 
 type EditorAuthGateProps = {
   children: ReactNode;
@@ -15,6 +15,11 @@ export default function EditorAuthGate({ children }: EditorAuthGateProps) {
   useEffect(() => {
     if (!hasStoredAuthSession()) {
       router.replace("/login?next=/editor");
+      return;
+    }
+
+    if (getStoredAuthUser()?.mustChangePassword) {
+      router.replace("/change-password?next=/editor");
       return;
     }
 

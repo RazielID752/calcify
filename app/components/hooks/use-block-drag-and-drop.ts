@@ -128,7 +128,8 @@ export const useBlockDragAndDrop = ({
       block.insertAdjacentElement("afterend", nextBlock);
 
       const range = document.createRange();
-      range.selectNodeContents(nextBlock);
+      range.setStart(nextBlock, 0);
+      range.collapse(true);
       selection.removeAllRanges();
       selection.addRange(range);
       editor.focus({ preventScroll: true });

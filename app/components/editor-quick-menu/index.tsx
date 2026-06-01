@@ -3,6 +3,7 @@
 import {
   CircleHelp,
   Download,
+  FileDown,
   Files,
   GitBranch,
   Globe2,
@@ -23,6 +24,7 @@ type EditorQuickMenuProps = {
   onOpenDocuments: () => void;
   onSave: () => void;
   onExport: () => void;
+  onExportPdf: () => void;
   onImportMd: () => void;
   onOpenGithub: () => void;
   onLoginRequest: () => void;
@@ -35,6 +37,7 @@ export default function EditorQuickMenu({
   onOpenDocuments,
   onSave,
   onExport,
+  onExportPdf,
   onImportMd,
   onOpenGithub,
   onLoginRequest,
@@ -141,6 +144,16 @@ export default function EditorQuickMenu({
           >
             <Download className="size-4" />
             Exportar (.md)
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-start gap-2 text-zinc-700 hover:bg-zinc-100"
+            onClick={() => handleMenuAction(onExportPdf)}
+          >
+            <FileDown className="size-4" />
+            Exportar PDF
           </Button>
 
           <Button

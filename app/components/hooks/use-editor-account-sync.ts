@@ -7,22 +7,22 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import type { DocumentApiResponse } from "@/app/interfaces/documents";
 import {
   ApiRequestError,
   deleteDocumentWithApi,
-  fetchDocumentWithApi,
   fetchDocumentsWithApi,
+  fetchDocumentWithApi,
   isGuid,
   upsertDocumentWithApi,
 } from "@/app/services/document.service";
-import type { DocumentApiResponse } from "@/app/interfaces/documents";
+import { loginWithApi, logoutWithApi } from "@/utils/auth-api";
 import {
   AUTH_TOKEN_STORAGE_KEY,
   AUTH_USER_STORAGE_KEY,
   clearAuthSession,
   persistAuthSession,
 } from "@/utils/auth-session";
-import { loginWithApi, logoutWithApi } from "@/utils/auth-api";
 import {
   createDocumentId,
   DEFAULT_DOCUMENT_TITLE,
@@ -92,6 +92,15 @@ const getMostRecentApiDocuments = (items: DocumentApiResponse[]) => {
   }
 
   return Array.from(latestDocumentByFingerprint.values());
+};
+
+const redirectToLogin = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const nextUrl = `${window.location.pathname}${window.location.search}`;
+  window.location.replace(`/login?next=${encodeURIComponent(nextUrl)}`);
 };
 
 export const useEditorAccountSync = ({
@@ -165,6 +174,17 @@ export const useEditorAccountSync = ({
     window.clearTimeout(autosaveRetryTimerRef.current);
     autosaveRetryTimerRef.current = null;
   }, []);
+
+  const handleExpiredSession = useCallback(() => {
+    clearAutosaveTimer();
+    clearAutosaveRetryTimer();
+    persistCurrentDocumentHtml();
+    clearAuthSession();
+    setAuthToken(null);
+    setAuthenticatedUser(null);
+    toast.error("Sua sessão expirou. Faça login novamente.");
+    redirectToLogin();
+  }, [clearAutosaveRetryTimer, clearAutosaveTimer, persistCurrentDocumentHtml]);
 
   const detachServerDocumentToLocal = useCallback(
     (documentId: string) => {
@@ -410,6 +430,11 @@ export const useEditorAccountSync = ({
 
         return { status: "saved", savedDocument };
       } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 401) {
+          handleExpiredSession();
+          return { status: "error", error };
+        }
+
         if (error instanceof ApiRequestError && error.status === 404) {
           return {
             status: "notFound",
@@ -428,6 +453,7 @@ export const useEditorAccountSync = ({
     [
       clearAutosaveRetryTimer,
       detachServerDocumentToLocal,
+      handleExpiredSession,
       setActiveDocumentId,
       setDocuments,
     ],
@@ -688,7 +714,11 @@ export const useEditorAccountSync = ({
           return mergedDocuments;
         });
       })
-      .catch(() => {
+      .catch((error) => {
+        if (error instanceof ApiRequestError && error.status === 401) {
+          handleExpiredSession();
+        }
+
         return;
       });
 
@@ -700,6 +730,7 @@ export const useEditorAccountSync = ({
     authenticatedUser,
     detachAllServerDocumentsToLocal,
     hadStoredDocuments,
+    handleExpiredSession,
     setActiveDocumentId,
     setDocuments,
   ]);
@@ -891,6 +922,12 @@ export const useEditorAccountSync = ({
         closeDocumentLocally(documentId);
         toast.success("Documento excluído.", { id: deletingToastId });
       } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 401) {
+          toast.dismiss(deletingToastId);
+          handleExpiredSession();
+          return;
+        }
+
         const fallbackMessage = "Não foi possível excluir o documento.";
         const message =
           error instanceof Error && error.message.trim().length > 0
@@ -899,7 +936,7 @@ export const useEditorAccountSync = ({
         toast.error(message, { id: deletingToastId });
       }
     },
-    [authToken, authenticatedUser, closeDocumentLocally],
+    [authToken, authenticatedUser, closeDocumentLocally, handleExpiredSession],
   );
 
   return {
@@ -909,6 +946,7 @@ export const useEditorAccountSync = ({
     handleCloseDocument,
     handleConfirmLogout,
     handleContinueLogin,
+    handleExpiredSession,
     handleLogin,
     handleLogoutRequest,
     handleSaveDocument,

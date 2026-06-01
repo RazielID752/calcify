@@ -47,7 +47,8 @@ import ZoomControls from "../zoom-controls";
 const OUTLINE_HEADING_SELECTOR = "h1,h2,h3,h4";
 const EMPTY_OUTLINE_ITEM_INDEX = -1;
 const OUTLINE_READING_LINE_VIEWPORT_RATIO = 0.35;
-const BLOCK_ACTION_PLACEHOLDER_TEXT = "Digite aqui ou escolha uma função";
+const PAGE_EDGE_THRESHOLD_PX = 8;
+const BLOCK_ACTION_PLACEHOLDER_TEXT = "Digite ou escolha uma função";
 
 const normalizeOutlineTitle = (value: string | null | undefined) =>
   value?.replace(/\s+/g, " ").trim() ?? "";
@@ -66,14 +67,35 @@ const getActiveOutlineItemIndex = (headings: HTMLElement[]) => {
     return EMPTY_OUTLINE_ITEM_INDEX;
   }
 
+  const pageScrollTop = window.scrollY;
+  const pageScrollBottom = pageScrollTop + window.innerHeight;
+  const pageHeight = document.documentElement.scrollHeight;
+
+  if (pageScrollTop <= PAGE_EDGE_THRESHOLD_PX) {
+    return 0;
+  }
+
+  if (pageScrollBottom >= pageHeight - PAGE_EDGE_THRESHOLD_PX) {
+    return headings.length - 1;
+  }
+
   const readingLineOffset =
     window.innerHeight * OUTLINE_READING_LINE_VIEWPORT_RATIO;
 
-  return headings.reduce((activeItemIndex, heading, headingListIndex) => {
-    return heading.getBoundingClientRect().top <= readingLineOffset
-      ? headingListIndex
-      : activeItemIndex;
-  }, EMPTY_OUTLINE_ITEM_INDEX);
+  const activeItemIndex = headings.reduce(
+    (currentActiveItemIndex, heading, headingListIndex) => {
+      return heading.getBoundingClientRect().top <= readingLineOffset
+        ? headingListIndex
+        : currentActiveItemIndex;
+    },
+    EMPTY_OUTLINE_ITEM_INDEX,
+  );
+
+  if (activeItemIndex === EMPTY_OUTLINE_ITEM_INDEX) {
+    return 0;
+  }
+
+  return activeItemIndex;
 };
 
 const createOutlineItem = (
@@ -244,6 +266,7 @@ export default function Editor() {
     authToken,
     flushAutosave,
     handleConfirmLogout,
+    handleExpiredSession,
     handleLogoutRequest,
     handleSaveDocument,
     isLogoutDialogOpen,
@@ -284,6 +307,7 @@ export default function Editor() {
   const {
     handleCopyMarkdown,
     handleExportDocument,
+    handleExportPdf,
     handleImportMarkdownDocument,
     handleOpenGithub,
     handleOpenImportDialog,
@@ -832,6 +856,7 @@ export default function Editor() {
         onOpenDocuments={() => setIsDocumentLibraryOpen(true)}
         onSave={handleSaveDocument}
         onExport={handleExportDocument}
+        onExportPdf={handleExportPdf}
         onImportMd={handleOpenImportDialog}
         onOpenGithub={handleOpenGithub}
         onLoginRequest={() => router.push("/login?next=/editor")}
@@ -857,6 +882,7 @@ export default function Editor() {
         documents={documents}
         open={isDocumentLibraryOpen}
         onDeleteOpenDocument={handleCloseDocumentLocal}
+        onAuthExpired={handleExpiredSession}
         onOpenChange={setIsDocumentLibraryOpen}
         onOpenDocument={handleOpenLibraryDocument}
         onRenameDocument={handleRenameDocument}

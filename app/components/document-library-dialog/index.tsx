@@ -13,6 +13,14 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { DocumentApiResponse } from "@/app/interfaces/documents";
+import {
+  ApiRequestError,
+  deleteDocumentWithApi,
+  fetchDocumentsWithApi,
+  isGuid,
+  updateDocumentTitleWithApi,
+} from "@/app/services/document.service";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,13 +32,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import {
-  deleteDocumentWithApi,
-  fetchDocumentsWithApi,
-  isGuid,
-  updateDocumentTitleWithApi,
-} from "@/app/services/document.service";
-import type { DocumentApiResponse } from "@/app/interfaces/documents";
 import {
   DEFAULT_DOCUMENT_TITLE,
   type Document,
@@ -80,6 +81,7 @@ type DocumentLibraryDialogProps = {
   documents: Document[];
   open: boolean;
   onDeleteOpenDocument: (documentId: string) => void;
+  onAuthExpired: () => void;
   onOpenChange: (open: boolean) => void;
   onOpenDocument: (documentItem: Document) => void;
   onRenameDocument: (documentId: string, nextTitle: string) => void;
@@ -144,6 +146,7 @@ export default function DocumentLibraryDialog({
   documents,
   open,
   onDeleteOpenDocument,
+  onAuthExpired,
   onOpenChange,
   onOpenDocument,
   onRenameDocument,
@@ -301,6 +304,11 @@ export default function DocumentLibraryDialog({
           return;
         }
 
+        if (error instanceof ApiRequestError && error.status === 401) {
+          onAuthExpired();
+          return;
+        }
+
         const message =
           error instanceof Error && error.message.trim().length > 0
             ? error.message
@@ -318,7 +326,7 @@ export default function DocumentLibraryDialog({
     return () => {
       isCancelled = true;
     };
-  }, [authToken, open, page, searchQuery]);
+  }, [authToken, onAuthExpired, open, page, searchQuery]);
 
   const handleStartEdit = useCallback((documentItem: LibraryDocument) => {
     setActionMenuDocumentId(null);
@@ -369,6 +377,11 @@ export default function DocumentLibraryDialog({
       setEditDocument(null);
       toast.success("Título atualizado.");
     } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        onAuthExpired();
+        return;
+      }
+
       const message =
         error instanceof Error && error.message.trim().length > 0
           ? error.message
@@ -383,6 +396,7 @@ export default function DocumentLibraryDialog({
     editDocument,
     editTitle,
     onRenameDocument,
+    onAuthExpired,
   ]);
 
   const handleConfirmDelete = useCallback(async () => {
@@ -416,6 +430,11 @@ export default function DocumentLibraryDialog({
       setDeleteDocument(null);
       toast.success("Documento apagado.");
     } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        onAuthExpired();
+        return;
+      }
+
       const message =
         error instanceof Error && error.message.trim().length > 0
           ? error.message
@@ -424,7 +443,13 @@ export default function DocumentLibraryDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [authToken, deleteDocument, onDeleteOpenDocument, selectedDocumentId]);
+  }, [
+    authToken,
+    deleteDocument,
+    onAuthExpired,
+    onDeleteOpenDocument,
+    selectedDocumentId,
+  ]);
 
   const handleOpenSelectedDocument = useCallback(() => {
     if (!selectedDocument) {

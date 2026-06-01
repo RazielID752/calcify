@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,8 +8,9 @@ const rootDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const releasePath = path.join(rootDir, "app", "config", "release.json");
 const releaseBranches = new Set(["main", "master"]);
+const releaseFiles = new Set(["package.json", "app/config/release.json"]);
+const isDryRun = process.argv.includes("--dry-run");
 
 const run = (command, args) =>
   spawnSync(command, args, {
@@ -35,16 +35,28 @@ if (!branch || !releaseBranches.has(branch)) {
   process.exit(0);
 }
 
-const releaseJson = JSON.parse(await readFile(releasePath, "utf8"));
-const today = new Date().toISOString().slice(0, 10);
+const stagedFilesResult = run("git", ["diff", "--cached", "--name-only"]);
 
-if (releaseJson.publishedAt === today) {
+if (stagedFilesResult.status !== 0) {
+  process.exit(stagedFilesResult.status ?? 1);
+}
+
+const stagedFiles = stagedFilesResult.stdout
+  .split("\n")
+  .map((filePath) => filePath.trim())
+  .filter(Boolean);
+
+const hasManualRelease = stagedFiles.some((filePath) =>
+  releaseFiles.has(filePath),
+);
+
+if (hasManualRelease) {
   process.exit(0);
 }
 
 const releaseResult = spawnSync(
   process.execPath,
-  ["scripts/create-release.mjs", "patch"],
+  ["scripts/create-release.mjs", "patch", ...(isDryRun ? ["--dry-run"] : [])],
   {
     cwd: rootDir,
     stdio: "inherit",
@@ -53,6 +65,10 @@ const releaseResult = spawnSync(
 
 if (releaseResult.status !== 0) {
   process.exit(releaseResult.status ?? 1);
+}
+
+if (isDryRun) {
+  process.exit(0);
 }
 
 const addResult = spawnSync(

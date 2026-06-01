@@ -31,6 +31,10 @@ const getRedirectTarget = () => {
   return target;
 };
 
+const redirectTo = (target: string) => {
+  window.location.assign(target);
+};
+
 export default function useLogin({
   onError: externalOnError,
 }: UseLoginOptions = {}) {
@@ -62,16 +66,16 @@ export default function useLogin({
 
       window.setTimeout(() => {
         if (response.data.user.mustChangePassword) {
-          router.replace(
+          redirectTo(
             `/change-password?next=${encodeURIComponent(getRedirectTarget())}`,
           );
           return;
         }
 
-        router.replace(getRedirectTarget());
+        redirectTo(getRedirectTarget());
       }, 250);
     },
-    [router, showSuccess],
+    [showSuccess],
   );
 
   const onError = useCallback(

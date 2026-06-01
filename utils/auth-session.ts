@@ -1,5 +1,6 @@
 import type { Perfis } from "@/enum/perfis.enum";
 
+export const ADMIN_EMAIL = "n7smarcos@gmail.com";
 export const AUTH_TOKEN_STORAGE_KEY = "calcify_auth_token_v1";
 export const AUTH_USER_STORAGE_KEY = "calcify_auth_user_v1";
 export const AUTH_SESSION_COOKIE_NAME = "calcify_auth_session_v1";
@@ -12,6 +13,12 @@ export type StoredAuthUser = {
   mustChangePassword?: boolean;
   profile?: Perfis;
 };
+
+export const isAdminUser = (
+  user: Pick<Partial<StoredAuthUser>, "email" | "profile"> | null,
+) =>
+  user?.profile === "Administrador" ||
+  user?.email?.trim().toLowerCase() === ADMIN_EMAIL;
 
 export const getStoredAuthUser = () => {
   if (typeof window === "undefined") {

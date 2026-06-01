@@ -6,7 +6,11 @@ export function proxy(request: NextRequest) {
   const hasSession =
     request.cookies.get(AUTH_SESSION_COOKIE_NAME)?.value === "1";
 
-  if (nextUrl.pathname.startsWith("/editor") && !hasSession) {
+  if (
+    (nextUrl.pathname.startsWith("/editor") ||
+      nextUrl.pathname.startsWith("/admin")) &&
+    !hasSession
+  ) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", `${nextUrl.pathname}${nextUrl.search}`);
 
@@ -28,7 +32,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/editor/:path*", "/login", "/change-password"],
+  matcher: ["/editor/:path*", "/admin/:path*", "/login", "/change-password"],
 };
 
 export default proxy;

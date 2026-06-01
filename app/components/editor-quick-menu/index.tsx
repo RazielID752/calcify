@@ -12,6 +12,7 @@ import {
   Menu,
   Save,
   Share2,
+  ShieldCheck,
   Upload,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 
 type EditorQuickMenuProps = {
   currentUser: { name: string; email: string } | null;
+  isAdmin: boolean;
   onOpenHelp: () => void;
   onOpenDocuments: () => void;
   onSave: () => void;
@@ -35,6 +37,7 @@ type EditorQuickMenuProps = {
 
 export default function EditorQuickMenu({
   currentUser,
+  isAdmin,
   onOpenHelp,
   onOpenDocuments,
   onSave,
@@ -128,6 +131,19 @@ export default function EditorQuickMenu({
               Ir para o site
             </Link>
           </Button>
+
+          {isAdmin ? (
+            <Button
+              asChild
+              variant="ghost"
+              className="w-full justify-start gap-2 text-zinc-700 hover:bg-zinc-100"
+            >
+              <Link href="/admin" onClick={() => setIsOpen(false)}>
+                <ShieldCheck className="size-4" />
+                Administração
+              </Link>
+            </Button>
+          ) : null}
 
           <Button
             type="button"

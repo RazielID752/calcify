@@ -16,11 +16,13 @@ import {
   isGuid,
   upsertDocumentWithApi,
 } from "@/app/services/document.service";
+import { Perfis } from "@/enum/perfis.enum";
 import { loginWithApi, logoutWithApi } from "@/utils/auth-api";
 import {
   AUTH_TOKEN_STORAGE_KEY,
   AUTH_USER_STORAGE_KEY,
   clearAuthSession,
+  isAdminUser,
   persistAuthSession,
 } from "@/utils/auth-session";
 import {
@@ -41,6 +43,7 @@ type AuthUser = {
   name: string;
   email: string;
   lastLoginAt: string | null;
+  profile?: Perfis;
 };
 
 type SyncResult =
@@ -577,6 +580,7 @@ export const useEditorAccountSync = ({
             typeof parsedUser.lastLoginAt === "string"
               ? parsedUser.lastLoginAt
               : null,
+          profile: isAdminUser(parsedUser) ? Perfis.ADMIN : parsedUser.profile,
         });
       }
     } catch {

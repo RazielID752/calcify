@@ -14,6 +14,7 @@ import {
   ApiRequestError,
   fetchDocumentWithApi,
 } from "@/app/services/document.service";
+import { isAdminUser } from "@/utils/auth-session";
 import DocumentLibraryDialog from "../document-library-dialog";
 import DocumentTabsBar from "../document-tabs-bar";
 import EditorBlockActionMenu, {
@@ -975,6 +976,7 @@ export default function Editor() {
               }
             : null
         }
+        isAdmin={isAdminUser(authenticatedUser)}
         onOpenHelp={handleOpenHelpFromMenu}
         onOpenDocuments={() => setIsDocumentLibraryOpen(true)}
         onSave={handleSaveDocument}

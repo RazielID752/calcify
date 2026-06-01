@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Globe2, LockKeyhole, Mail, Share2 } from "lucide-react";
+import { Copy, Globe2, LockKeyhole, SendHorizontal, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import {
 import type {
   DocumentGeneralAccess,
   DocumentShareSettings,
+  DocumentUserAccess,
 } from "../hooks/use-document-sharing";
 
 type EditorShareDialogProps = {
@@ -32,15 +33,22 @@ type EditorShareDialogProps = {
   settings: DocumentShareSettings;
   shareLink: string;
   onCopyLink: () => void;
-  onInviteEditor: (email: string) => Promise<{ ok: boolean; message: string }>;
+  onInviteEditor: (
+    email: string,
+    access: DocumentUserAccess,
+  ) => Promise<{ ok: boolean; message: string }>;
   onGeneralAccessChange: (access: DocumentGeneralAccess) => Promise<void>;
   onOpenChange: (open: boolean) => void;
+  onUserAccessChange: (
+    shareId: string,
+    access: DocumentUserAccess,
+  ) => Promise<void>;
 };
 
 const getGeneralAccessLabel = (access: DocumentGeneralAccess) =>
   access === "public"
-    ? "Qualquer pessoa com o link pode editar"
-    : "Somente pessoas convidadas podem editar";
+    ? "Qualquer pessoa com o link pode visualizar; edição só para convidados com permissão."
+    : "Somente pessoas convidadas podem abrir o documento.";
 
 export default function EditorShareDialog({
   documentTitle,
@@ -53,14 +61,18 @@ export default function EditorShareDialog({
   onInviteEditor,
   onGeneralAccessChange,
   onOpenChange,
+  onUserAccessChange,
 }: EditorShareDialogProps) {
   const [email, setEmail] = useState("");
+  const [inviteAccess, setInviteAccess] =
+    useState<DocumentUserAccess>("viewer");
   const [errorMessage, setErrorMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setEmail("");
+      setInviteAccess("viewer");
       setErrorMessage("");
       setIsInviting(false);
     }
@@ -68,7 +80,7 @@ export default function EditorShareDialog({
 
   const handleInvite = async () => {
     setIsInviting(true);
-    const result = await onInviteEditor(email);
+    const result = await onInviteEditor(email, inviteAccess);
     setIsInviting(false);
 
     if (!result.ok) {
@@ -94,31 +106,57 @@ export default function EditorShareDialog({
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              value={email}
-              placeholder="Digite o e-mail"
-              className="h-10 bg-zinc-50 focus-visible:bg-white"
-              onChange={(event) => setEmail(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void handleInvite();
-                }
-              }}
-            />
-            <Button
-              type="button"
-              className="shrink-0"
-              disabled={isInviting}
-              onClick={() => void handleInvite()}
-            >
-              <Mail className="size-4" />
-              {isInviting ? "Compartilhando..." : "Compartilhar"}
-            </Button>
+          <div className="rounded-xl border border-zinc-200 bg-white/90 p-4">
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-zinc-500 uppercase">
+                  Convidar por e-mail
+                </p>
+                <Input
+                  type="email"
+                  value={email}
+                  placeholder="Digite o e-mail"
+                  className="mt-2 h-10 bg-zinc-50 focus-visible:bg-white"
+                  onChange={(event) => setEmail(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleInvite();
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="sm:max-w-40">
+                  <Select
+                    value={inviteAccess}
+                    onValueChange={(value) =>
+                      setInviteAccess(value as DocumentUserAccess)
+                    }
+                  >
+                    <SelectTrigger className="mt-2 h-10 w-full bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Visualizar</SelectItem>
+                      <SelectItem value="editor">Editar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:ml-auto">
+                  <Button
+                    type="button"
+                    className="h-10 w-full shrink-0 sm:w-auto"
+                    disabled={isInviting}
+                    onClick={() => void handleInvite()}
+                  >
+                    {isInviting ? "Compartilhando..." : "Compartilhar"}
+                    <SendHorizontal className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
-
           {errorMessage ? (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {errorMessage}
@@ -157,9 +195,23 @@ export default function EditorShareDialog({
                   </p>
                   <p className="truncate text-xs text-zinc-500">{user.email}</p>
                 </div>
-                <span className="shrink-0 text-xs font-medium text-emerald-700">
-                  Editor
-                </span>
+                <Select
+                  value={user.access}
+                  onValueChange={(value) =>
+                    void onUserAccessChange(
+                      user.id,
+                      value as DocumentUserAccess,
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-8 w-30 bg-white text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Visualizar</SelectItem>
+                    <SelectItem value="editor">Editar</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             ))}
 

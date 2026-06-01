@@ -5,6 +5,7 @@ import EditorShareDialog from "../editor-share-dialog";
 import type {
   DocumentGeneralAccess,
   DocumentShareSettings,
+  DocumentUserAccess,
 } from "../hooks/use-document-sharing";
 import ImageDialog from "../image-dialog";
 import LinkDialog from "../link-dialog";
@@ -35,6 +36,7 @@ type EditorDialogsStackProps = {
   onInsertImage: (url: string) => void;
   onInviteShareEditor: (
     email: string,
+    access: DocumentUserAccess,
   ) => Promise<{ ok: boolean; message: string }>;
   onLinkDialogOpenChange: (open: boolean) => void;
   onLinkUrlChange: (url: string) => void;
@@ -43,6 +45,10 @@ type EditorDialogsStackProps = {
   onRemoveImage: () => void;
   onRemoveLink: () => void;
   onShareDialogOpenChange: (open: boolean) => void;
+  onSharedUserAccessChange: (
+    shareId: string,
+    access: DocumentUserAccess,
+  ) => Promise<void>;
 };
 
 export default function EditorDialogsStack({
@@ -77,6 +83,7 @@ export default function EditorDialogsStack({
   onRemoveImage,
   onRemoveLink,
   onShareDialogOpenChange,
+  onSharedUserAccessChange,
 }: EditorDialogsStackProps) {
   return (
     <>
@@ -127,6 +134,7 @@ export default function EditorDialogsStack({
         onGeneralAccessChange={onGeneralShareAccessChange}
         onInviteEditor={onInviteShareEditor}
         onOpenChange={onShareDialogOpenChange}
+        onUserAccessChange={onSharedUserAccessChange}
       />
     </>
   );

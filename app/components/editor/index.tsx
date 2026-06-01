@@ -312,6 +312,7 @@ export default function Editor() {
     loadShareSettings,
     setGeneralAccess,
     shareLink,
+    updateUserAccess,
   } = useDocumentSharing({
     activeDocumentId,
     authToken,
@@ -1134,6 +1135,7 @@ export default function Editor() {
             onRemoveImage={handleRemoveImage}
             onRemoveLink={handleRemoveLink}
             onShareDialogOpenChange={setIsShareDialogOpen}
+            onSharedUserAccessChange={updateUserAccess}
           />
         </div>
       </div>

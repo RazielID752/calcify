@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type {
   DocumentGeneralAccess,
   DocumentShareSettings,
+  DocumentUserAccess,
 } from "@/app/interfaces/document-sharing";
 import {
   ApiRequestError,
@@ -12,6 +13,7 @@ import {
   inviteDocumentEditorWithApi,
   isGuid,
   updateDocumentShareAccessWithApi,
+  updateDocumentSharedUserAccessWithApi,
 } from "@/app/services/document.service";
 
 const DEFAULT_SHARE_SETTINGS: DocumentShareSettings = {
@@ -125,7 +127,7 @@ export const useDocumentSharing = ({
   );
 
   const inviteEditor = useCallback(
-    async (email: string) => {
+    async (email: string, access: DocumentUserAccess) => {
       const normalizedEmail = normalizeEmail(email);
 
       if (!isValidEmail(normalizedEmail)) {
@@ -144,6 +146,7 @@ export const useDocumentSharing = ({
           authToken,
           activeDocumentId,
           normalizedEmail,
+          access,
         );
         setActiveSettings(settings);
 
@@ -151,7 +154,7 @@ export const useDocumentSharing = ({
       } catch (error) {
         if (error instanceof ApiRequestError && error.status === 401) {
           onAuthExpired();
-          return { ok: false, message: "Sua sessão expirou." };
+          return { ok: false, message: "" };
         }
 
         const message =
@@ -161,10 +164,41 @@ export const useDocumentSharing = ({
 
         toast.error(message);
 
-        return { ok: false, message };
+        return { ok: false, message: "" };
       }
     },
     [activeDocumentId, authToken, onAuthExpired],
+  );
+
+  const updateUserAccess = useCallback(
+    async (shareId: string, access: DocumentUserAccess) => {
+      if (!authToken || !isGuid(activeDocumentId)) {
+        return;
+      }
+
+      try {
+        const settings = await updateDocumentSharedUserAccessWithApi(
+          authToken,
+          activeDocumentId,
+          shareId,
+          access,
+        );
+        setActiveSettings(settings);
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.status === 401) {
+          onAuthExpired();
+          return;
+        }
+
+        const message =
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : "Não foi possível atualizar a permissão.";
+        toast.error(message);
+        await loadShareSettings();
+      }
+    },
+    [activeDocumentId, authToken, loadShareSettings, onAuthExpired],
   );
 
   const shareLink = useMemo(
@@ -179,7 +213,12 @@ export const useDocumentSharing = ({
     loadShareSettings,
     setGeneralAccess,
     shareLink,
+    updateUserAccess,
   };
 };
 
-export type { DocumentGeneralAccess, DocumentShareSettings };
+export type {
+  DocumentGeneralAccess,
+  DocumentShareSettings,
+  DocumentUserAccess,
+};

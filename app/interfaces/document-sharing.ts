@@ -1,4 +1,5 @@
 export type DocumentGeneralAccess = "private" | "public";
+export type DocumentUserAccess = "viewer" | "editor";
 
 export type DocumentShareOwner = {
   id: string;
@@ -10,7 +11,7 @@ export type DocumentSharedUser = {
   id: string;
   email: string;
   name: string;
-  access: "editor";
+  access: DocumentUserAccess;
 };
 
 export type DocumentShareSettings = {

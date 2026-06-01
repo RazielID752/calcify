@@ -2,6 +2,7 @@ import type {
   DocumentGeneralAccess,
   DocumentSharedUser,
   DocumentShareSettings,
+  DocumentUserAccess,
 } from "@/app/interfaces/document-sharing";
 import type {
   DocumentApiResponse,
@@ -66,6 +67,9 @@ const normalizeDocumentResponse = (
 const normalizeShareAccess = (value: unknown): DocumentGeneralAccess =>
   value === "public" ? "public" : "private";
 
+const normalizeUserAccess = (value: unknown): DocumentUserAccess =>
+  value === "editor" ? "editor" : "viewer";
+
 const normalizeDocumentShareSettings = (
   value: unknown,
 ): DocumentShareSettings => {
@@ -126,7 +130,7 @@ const normalizeDocumentShareSettings = (
               id,
               email,
               name,
-              access: access === "editor" ? "editor" : "editor",
+              access: normalizeUserAccess(access),
             };
           })
           .filter((user): user is DocumentSharedUser => user !== null)
@@ -465,6 +469,7 @@ export async function inviteDocumentEditorWithApi(
   token: string,
   documentId: string,
   email: string,
+  access: DocumentUserAccess,
 ) {
   const response = await fetch(
     `${resolveApiBaseUrl()}/api/documents/${documentId}/share/invite`,
@@ -474,7 +479,7 @@ export async function inviteDocumentEditorWithApi(
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, access }),
     },
   );
 
@@ -485,6 +490,38 @@ export async function inviteDocumentEditorWithApi(
       (data as { message?: string; Message?: string }).message ??
         (data as { message?: string; Message?: string }).Message ??
         "Não foi possível compartilhar o documento.",
+      response.status,
+    );
+  }
+
+  return normalizeDocumentShareSettings(data);
+}
+
+export async function updateDocumentSharedUserAccessWithApi(
+  token: string,
+  documentId: string,
+  shareId: string,
+  access: DocumentUserAccess,
+) {
+  const response = await fetch(
+    `${resolveApiBaseUrl()}/api/documents/${documentId}/share/users/${shareId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ access }),
+    },
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      (data as { message?: string; Message?: string }).message ??
+        (data as { message?: string; Message?: string }).Message ??
+        "Não foi possível atualizar a permissão.",
       response.status,
     );
   }

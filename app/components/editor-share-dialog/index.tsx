@@ -29,6 +29,7 @@ type EditorShareDialogProps = {
   documentTitle: string;
   isLoading: boolean;
   open: boolean;
+  canManageShare: boolean;
   owner: { name: string; email: string } | null;
   settings: DocumentShareSettings;
   shareLink: string;
@@ -54,6 +55,7 @@ export default function EditorShareDialog({
   documentTitle,
   isLoading,
   open,
+  canManageShare,
   owner,
   settings,
   shareLink,
@@ -68,6 +70,7 @@ export default function EditorShareDialog({
     useState<DocumentUserAccess>("viewer");
   const [errorMessage, setErrorMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
+
 
   useEffect(() => {
     if (!open) {
@@ -91,6 +94,8 @@ export default function EditorShareDialog({
     setEmail("");
     setErrorMessage("");
   };
+
+  
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,31 +200,31 @@ export default function EditorShareDialog({
                   </p>
                   <p className="truncate text-xs text-zinc-500">{user.email}</p>
                 </div>
-                <Select
-                  value={user.access}
-                  onValueChange={(value) =>
-                    void onUserAccessChange(
-                      user.id,
-                      value as DocumentUserAccess,
-                    )
-                  }
-                >
-                  <SelectTrigger className="h-8 w-30 bg-white text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Visualizar</SelectItem>
-                    <SelectItem value="editor">Editar</SelectItem>
-                  </SelectContent>
-                </Select>
+                {canManageShare ? (
+                  <Select
+                    value={user.access}
+                    onValueChange={(value) =>
+                      void onUserAccessChange(
+                        user.id,
+                        value as DocumentUserAccess,
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-8 w-30 bg-white text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Visualizar</SelectItem>
+                      <SelectItem value="editor">Editar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="shrink-0 text-xs font-medium text-zinc-600">
+                    {user.access === "editor" ? "Editar" : "Visualizar"}
+                  </span>
+                )}
               </div>
             ))}
-
-            {isLoading ? (
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
-                Carregando permissões...
-              </div>
-            ) : null}
           </section>
 
           <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">

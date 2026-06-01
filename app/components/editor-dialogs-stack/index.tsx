@@ -22,6 +22,7 @@ type EditorDialogsStackProps = {
   openShareDialog: boolean;
   isLogoutSubmitting: boolean;
   isShareLoading: boolean;
+  canManageShare: boolean;
   shareLink: string;
   shareOwner: { name: string; email: string } | null;
   shareSettings: DocumentShareSettings;
@@ -63,6 +64,7 @@ export default function EditorDialogsStack({
   openShareDialog,
   isLogoutSubmitting,
   isShareLoading,
+  canManageShare,
   shareLink,
   shareOwner,
   shareSettings,
@@ -126,6 +128,7 @@ export default function EditorDialogsStack({
       <EditorShareDialog
         documentTitle={activeDocumentTitle}
         open={openShareDialog}
+        canManageShare={canManageShare}
         owner={shareOwner}
         settings={shareSettings}
         shareLink={shareLink}

@@ -1107,6 +1107,11 @@ export default function Editor() {
             openShareDialog={isShareDialogOpen}
             isLogoutSubmitting={isLogoutSubmitting}
             isShareLoading={isLoadingShareSettings}
+            canManageShare={
+              Boolean(authenticatedUser && activeSettings.owner) &&
+              (activeSettings.owner?.id === authenticatedUser?.id ||
+                activeSettings.owner?.email === authenticatedUser?.email)
+            }
             shareLink={shareLink}
             shareOwner={
               activeSettings.owner ??

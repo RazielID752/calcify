@@ -4,7 +4,7 @@ import { Eye, EyeOff, KeyRound } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import icon from "@/assets/icon-big.png";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ const isValidPassword = (password: string) =>
   /[a-z]/.test(password) &&
   /[0-9]/.test(password);
 
-export default function ChangePasswordPage() {
+function ChangePasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [temporaryPassword, setTemporaryPassword] = useState("");
@@ -245,5 +245,35 @@ export default function ChangePasswordPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,#e7f7ef_0%,#f6f8f5_48%,#ffffff_100%)] px-4 text-zinc-950">
+          <div className="w-full max-w-80 rounded-lg border border-zinc-200 bg-white/90 p-6 text-center shadow-[0_24px_70px_rgb(24_24_27/0.10)] backdrop-blur">
+            <div className="mx-auto mb-4 grid size-13 place-items-center rounded-[14px] bg-emerald-50 shadow-sm shadow-zinc-950/10">
+              <Image
+                src={icon}
+                alt=""
+                className="size-9 rounded-[10px]"
+                priority
+              />
+            </div>
+            <div className="mx-auto mb-4 size-7 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-700" />
+            <p className="text-sm font-semibold text-zinc-900">
+              Preparando troca de senha
+            </p>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              Validando sua sessão para continuar com segurança.
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <ChangePasswordContent />
+    </Suspense>
   );
 }

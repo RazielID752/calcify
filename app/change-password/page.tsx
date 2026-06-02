@@ -40,7 +40,11 @@ function ChangePasswordContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isTemporaryPasswordVisible, setIsTemporaryPasswordVisible] =
+    useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)) {
@@ -164,14 +168,36 @@ function ChangePasswordContent() {
                 >
                   Senha temporária
                 </label>
-                <Input
-                  id="temporary-password"
-                  type={isPasswordVisible ? "text" : "password"}
-                  value={temporaryPassword}
-                  className="h-11 bg-zinc-50 focus-visible:bg-white"
-                  autoComplete="current-password"
-                  onChange={(event) => setTemporaryPassword(event.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="temporary-password"
+                    type={isTemporaryPasswordVisible ? "text" : "password"}
+                    value={temporaryPassword}
+                    className="h-11 bg-zinc-50 pr-10 focus-visible:bg-white"
+                    autoComplete="current-password"
+                    onChange={(event) =>
+                      setTemporaryPassword(event.target.value)
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                    aria-label={
+                      isTemporaryPasswordVisible
+                        ? "Ocultar senha"
+                        : "Mostrar senha"
+                    }
+                    onClick={() =>
+                      setIsTemporaryPasswordVisible((previous) => !previous)
+                    }
+                  >
+                    {isTemporaryPasswordVisible ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -181,14 +207,34 @@ function ChangePasswordContent() {
                 >
                   Nova senha
                 </label>
-                <Input
-                  id="new-password"
-                  type={isPasswordVisible ? "text" : "password"}
-                  value={newPassword}
-                  className="h-11 bg-zinc-50 focus-visible:bg-white"
-                  autoComplete="new-password"
-                  onChange={(event) => setNewPassword(event.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={isNewPasswordVisible ? "text" : "password"}
+                    value={newPassword}
+                    className="h-11 bg-zinc-50 pr-10 focus-visible:bg-white"
+                    autoComplete="new-password"
+                    onChange={(event) => setNewPassword(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                    aria-label={
+                      isNewPasswordVisible
+                        ? "Ocultar senha"
+                        : "Mostrar senha"
+                    }
+                    onClick={() =>
+                      setIsNewPasswordVisible((previous) => !previous)
+                    }
+                  >
+                    {isNewPasswordVisible ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -201,7 +247,7 @@ function ChangePasswordContent() {
                 <div className="relative">
                   <Input
                     id="confirm-password"
-                    type={isPasswordVisible ? "text" : "password"}
+                    type={isConfirmPasswordVisible ? "text" : "password"}
                     value={confirmPassword}
                     className="h-11 bg-zinc-50 pr-10 focus-visible:bg-white"
                     autoComplete="new-password"
@@ -211,13 +257,15 @@ function ChangePasswordContent() {
                     type="button"
                     className="absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center justify-center rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
                     aria-label={
-                      isPasswordVisible ? "Ocultar senhas" : "Mostrar senhas"
+                      isConfirmPasswordVisible
+                        ? "Ocultar senha"
+                        : "Mostrar senha"
                     }
                     onClick={() =>
-                      setIsPasswordVisible((previous) => !previous)
+                      setIsConfirmPasswordVisible((previous) => !previous)
                     }
                   >
-                    {isPasswordVisible ? (
+                    {isConfirmPasswordVisible ? (
                       <EyeOff className="size-4" />
                     ) : (
                       <Eye className="size-4" />

@@ -385,14 +385,19 @@ export default function AdminPageClient() {
             </h1>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={openCreateUserDialog}>
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={openCreateUserDialog}
+            >
               <UserPlus className="size-4" />
               Criar conta
             </Button>
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={openCreateGroupDialog}
             >
               <Plus className="size-4" />
@@ -401,6 +406,7 @@ export default function AdminPageClient() {
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => router.push("/editor")}
             >
               Voltar ao editor
@@ -466,7 +472,7 @@ export default function AdminPageClient() {
         ) : null}
 
         <section className="rounded-lg border border-zinc-200 bg-white">
-          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+          <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold">Contas cadastradas</h2>
               <p className="text-xs text-zinc-500">
@@ -477,6 +483,7 @@ export default function AdminPageClient() {
               type="button"
               size="sm"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={isLoading}
               onClick={() => void loadOverview()}
             >
@@ -498,7 +505,7 @@ export default function AdminPageClient() {
             {overview.users.map((user) => (
               <div
                 key={user.id}
-                className="grid gap-3 px-4 py-3 hover:bg-zinc-50 md:grid-cols-[1.2fr_0.65fr_0.8fr_0.75fr_auto] md:items-center"
+                className="grid gap-3 px-4 py-4 hover:bg-zinc-50 md:grid-cols-[1.2fr_0.65fr_0.8fr_0.75fr_auto] md:items-center"
               >
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-zinc-950">
@@ -508,8 +515,10 @@ export default function AdminPageClient() {
                     {user.email}
                   </span>
                 </span>
-                <span className="text-sm text-zinc-700">{user.profile}</span>
-                <span className="text-sm text-zinc-700">
+                <span className="text-sm text-zinc-700 before:mr-1 before:text-xs before:font-medium before:text-zinc-500 before:content-['Perfil:'] md:before:content-none">
+                  {user.profile}
+                </span>
+                <span className="text-sm text-zinc-700 before:mr-1 before:text-xs before:font-medium before:text-zinc-500 before:content-['Grupo:'] md:before:content-none">
                   {user.accessGroupName ?? "Conta individual"}
                 </span>
                 <span
@@ -524,7 +533,7 @@ export default function AdminPageClient() {
                 <div className="relative flex justify-end">
                   <Button
                     type="button"
-                    size="icon-sm"
+                    size="icon"
                     variant="ghost"
                     aria-label="Abrir ações da conta"
                     onClick={() => toggleActions(`user-${user.id}`)}
@@ -533,7 +542,7 @@ export default function AdminPageClient() {
                   </Button>
 
                   {openActionsId === `user-${user.id}` ? (
-                    <div className="absolute top-9 right-0 z-20 w-52 rounded-lg border border-zinc-200 bg-white p-1 shadow-lg">
+                    <div className="absolute top-10 right-0 z-20 w-56 rounded-lg border border-zinc-200 bg-white p-1 shadow-lg">
                       <button
                         type="button"
                         className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-100"
@@ -573,7 +582,7 @@ export default function AdminPageClient() {
         </section>
 
         <section className="rounded-lg border border-zinc-200 bg-white">
-          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
+          <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold">Grupos profissionais</h2>
               <p className="text-xs text-zinc-500">
@@ -584,6 +593,7 @@ export default function AdminPageClient() {
               type="button"
               size="sm"
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={openCreateGroupDialog}
             >
               <Plus className="size-4" />
@@ -601,7 +611,7 @@ export default function AdminPageClient() {
             {overview.groups.map((group) => (
               <div
                 key={group.id}
-                className="grid gap-3 px-4 py-3 hover:bg-zinc-50 md:grid-cols-[1.4fr_0.6fr_0.7fr_auto] md:items-center"
+                className="grid gap-3 px-4 py-4 hover:bg-zinc-50 md:grid-cols-[1.4fr_0.6fr_0.7fr_auto] md:items-center"
               >
                 <span className="min-w-0">
                   <span className="flex items-center gap-2 truncate text-sm font-medium text-zinc-950">
@@ -609,7 +619,7 @@ export default function AdminPageClient() {
                     {group.name}
                   </span>
                 </span>
-                <span className="text-sm text-zinc-700">
+                <span className="text-sm text-zinc-700 before:mr-1 before:text-xs before:font-medium before:text-zinc-500 before:content-['Contas:'] md:before:content-none">
                   {group.usersCount} conta(s)
                 </span>
                 <span
@@ -629,7 +639,7 @@ export default function AdminPageClient() {
                 <div className="relative flex justify-end">
                   <Button
                     type="button"
-                    size="icon-sm"
+                    size="icon"
                     variant="ghost"
                     aria-label="Abrir ações do grupo"
                     onClick={() => toggleActions(`group-${group.id}`)}
@@ -638,7 +648,7 @@ export default function AdminPageClient() {
                   </Button>
 
                   {openActionsId === `group-${group.id}` ? (
-                    <div className="absolute top-9 right-0 z-20 w-44 rounded-lg border border-zinc-200 bg-white p-1 shadow-lg">
+                    <div className="absolute top-10 right-0 z-20 w-48 rounded-lg border border-zinc-200 bg-white p-1 shadow-lg">
                       <button
                         type="button"
                         className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-100"

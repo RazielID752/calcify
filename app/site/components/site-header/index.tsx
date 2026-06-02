@@ -11,7 +11,7 @@ export default function SiteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 border-zinc-200/70 border-b bg-white/82 backdrop-blur-2xl">
+    <header className="sticky top-0 z-40 border-zinc-200/70 border-b bg-white/95 backdrop-blur-2xl">
       <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
@@ -41,7 +41,7 @@ export default function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="relative z-10 flex shrink-0 items-center gap-2">
           <Link
             href="/editor"
             className="hidden h-9 items-center gap-2 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white shadow-sm shadow-zinc-950/10 transition-colors hover:bg-zinc-800 sm:inline-flex"
@@ -54,7 +54,7 @@ export default function SiteHeader() {
             type="button"
             aria-label={isMenuOpen ? "Fechar navegação" : "Abrir navegação"}
             aria-expanded={isMenuOpen}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-zinc-200 bg-white/80 text-zinc-800 shadow-sm shadow-zinc-950/5 transition-colors hover:bg-zinc-100 md:hidden"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-900 shadow-sm shadow-zinc-950/5 transition-colors hover:bg-zinc-100 md:hidden"
             onClick={() => setIsMenuOpen((current) => !current)}
           >
             {isMenuOpen ? (
@@ -62,6 +62,7 @@ export default function SiteHeader() {
             ) : (
               <Menu className="size-4" />
             )}
+            Menu
           </button>
         </div>
       </div>

@@ -88,7 +88,11 @@ export default function EditorQuickMenu({
   };
 
   return (
-    <div ref={quickMenuRef} className="fixed bottom-5 left-4 z-50 sm:left-6">
+    <div
+      ref={quickMenuRef}
+      data-tour="quick-menu"
+      className="fixed bottom-5 left-4 z-50 sm:left-6"
+    >
       {isOpen ? (
         <div className="mb-2 w-64 rounded-xl border border-zinc-200 bg-white/95 p-2 shadow-lg backdrop-blur">
           {currentUser ? (

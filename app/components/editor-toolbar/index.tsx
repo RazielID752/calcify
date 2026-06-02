@@ -142,7 +142,10 @@ export default function EditorToolbar({
 
   return (
     <TooltipProvider>
-      <div className="sticky top-15 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur sm:top-[4.25rem]">
+      <div
+        data-tour="formatting-toolbar"
+        className="sticky top-15 z-20 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur sm:top-[4.25rem]"
+      >
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex min-w-max snap-x snap-mandatory items-center justify-start gap-2 md:justify-between sm:gap-3">
             <div className="shrink-0">
@@ -152,6 +155,7 @@ export default function EditorToolbar({
                 width={80}
                 height={80}
                 className="ml-2"
+                style={{ height: "auto" }}
               />
             </div>
 
@@ -419,7 +423,10 @@ export default function EditorToolbar({
 
             <div className="hidden h-7 w-px bg-zinc-200 sm:block" />
 
-            <div className="flex shrink-0 snap-start items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-1 py-1 [&_button[data-size='icon-sm']]:size-9 sm:[&_button[data-size='icon-sm']]:size-8">
+            <div
+              data-tour="math-tools"
+              className="flex shrink-0 snap-start items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-1 py-1 [&_button[data-size='icon-sm']]:size-9 sm:[&_button[data-size='icon-sm']]:size-8"
+            >
               <Select onValueChange={onMathChange}>
                 <SelectTrigger className="h-9 w-32 sm:h-8 sm:w-44">
                   <SelectValue placeholder="Math" />

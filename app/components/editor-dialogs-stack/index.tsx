@@ -31,6 +31,7 @@ type EditorDialogsStackProps = {
   onCopyShareLink: () => void;
   onGeneralShareAccessChange: (access: DocumentGeneralAccess) => Promise<void>;
   onHelpDialogOpenChange: (open: boolean) => void;
+  onRestartEditorTour: () => void;
   onImageDialogOpenChange: (open: boolean) => void;
   onImportDialogOpenChange: (open: boolean) => void;
   onImportMarkdown: (markdown: string) => void;
@@ -73,6 +74,7 @@ export default function EditorDialogsStack({
   onCopyShareLink,
   onGeneralShareAccessChange,
   onHelpDialogOpenChange,
+  onRestartEditorTour,
   onImageDialogOpenChange,
   onImportDialogOpenChange,
   onImportMarkdown,
@@ -109,6 +111,7 @@ export default function EditorDialogsStack({
 
       <EditorHelpDialog
         open={openHelpDialog}
+        onRestartTour={onRestartEditorTour}
         onOpenChange={onHelpDialogOpenChange}
       />
 

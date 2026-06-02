@@ -111,6 +111,7 @@ export default function EditorWritingSurface({
       {/* biome-ignore lint/a11y/useSemanticElements: um editor rich text precisa de contentEditable para suportar blocos formatados. */}
       <div
         ref={editorRef}
+        data-tour="writing-surface"
         className={EDITOR_CONTENT_CLASSNAME}
         contentEditable
         tabIndex={0}

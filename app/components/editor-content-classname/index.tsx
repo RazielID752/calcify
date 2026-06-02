@@ -53,6 +53,7 @@ export const EDITOR_CONTENT_CLASSNAME = [
   "[&_ul]:mb-6",
   "[&_li]:my-1",
   "[&_table]:my-6",
+  "[&_hr]:my-4",
   "[&_table]:w-full",
   "[&_table]:border-collapse",
   "[&_table]:text-sm",

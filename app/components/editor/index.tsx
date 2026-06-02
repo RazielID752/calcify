@@ -34,6 +34,7 @@ import EditorDocumentOutline, {
 } from "../editor-document-outline";
 import EditorFormattingToolbar from "../editor-formatting-toolbar";
 import EditorQuickMenu from "../editor-quick-menu";
+import EditorTour from "../editor-tour";
 import EditorWritingSurface from "../editor-writing-surface";
 import { useActiveEditorDocument } from "../hooks/use-active-editor-document";
 import { useAutoTransforms } from "../hooks/use-auto-transforms";
@@ -213,6 +214,7 @@ export default function Editor() {
   const [blockActionMenuTop, setBlockActionMenuTop] = useState<number | null>(
     null,
   );
+  const [editorTourRestartSignal, setEditorTourRestartSignal] = useState(0);
   const [outlineItems, setOutlineItems] = useState<EditorOutlineItem[]>([]);
   const [activeOutlineItemIndex, setActiveOutlineItemIndex] = useState(
     EMPTY_OUTLINE_ITEM_INDEX,
@@ -272,9 +274,9 @@ export default function Editor() {
     });
 
   const persistCurrentDocumentHtml = useCallback(() => {
-    const nextHtml = getCurrentEditorHtml();
-
     persistHtml();
+
+    const nextHtml = getCurrentEditorHtml();
     updateActiveDocumentContent(nextHtml);
     recordHistorySnapshot(nextHtml);
   }, [
@@ -961,6 +963,8 @@ export default function Editor() {
         fontSize: `${zoom}%`,
       }}
     >
+      <EditorTour restartSignal={editorTourRestartSignal} />
+
       <ZoomControls
         zoom={zoom}
         onIncrease={handleIncreaseZoom}
@@ -1130,6 +1134,9 @@ export default function Editor() {
             onCopyShareLink={handleCopyShareLink}
             onGeneralShareAccessChange={setGeneralAccess}
             onHelpDialogOpenChange={setIsHelpDialogOpen}
+            onRestartEditorTour={() =>
+              setEditorTourRestartSignal((currentSignal) => currentSignal + 1)
+            }
             onImageDialogOpenChange={setIsImageDialogOpen}
             onImportDialogOpenChange={setIsImportDialogOpen}
             onImportMarkdown={handleImportMarkdownDocument}

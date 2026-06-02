@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Keyboard,
   Layers3,
+  PlayCircle,
   Sparkles,
   Wand2,
 } from "lucide-react";
@@ -20,11 +21,13 @@ import {
 
 type EditorHelpDialogProps = {
   open: boolean;
+  onRestartTour: () => void;
   onOpenChange: (open: boolean) => void;
 };
 
 export default function EditorHelpDialog({
   open,
+  onRestartTour,
   onOpenChange,
 }: EditorHelpDialogProps) {
   const keyboardShortcuts = [
@@ -162,6 +165,18 @@ export default function EditorHelpDialog({
               Feche este guia e comece a escrever. Você pode voltar às
               instruções a qualquer momento pelo botão de Ajuda.
             </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3 border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-100"
+              onClick={() => {
+                onOpenChange(false);
+                window.setTimeout(onRestartTour, 250);
+              }}
+            >
+              <PlayCircle className="size-4" />
+              Ver tour guiado novamente
+            </Button>
           </section>
         </div>
 

@@ -322,6 +322,17 @@ export function useAutoTransforms({
     return true;
   };
 
+  const runHorizontalRuleFromMarkdown = (block: HTMLElement) => {
+    const horizontalRule = document.createElement("hr");
+    const nextParagraph = document.createElement("p");
+    nextParagraph.innerHTML = "<br>";
+
+    block.replaceWith(horizontalRule, nextParagraph);
+    moveCursorToEnd(nextParagraph);
+    persistHtml();
+    return true;
+  };
+
   const applyAutoMarkdownOnActiveBlock = (
     event: React.FormEvent<HTMLDivElement>,
   ) => {
@@ -349,6 +360,20 @@ export function useAutoTransforms({
     }
 
     const rawLine = block.innerText.replaceAll("\u00A0", " ");
+
+    const horizontalRuleMatch = rawLine.match(
+      /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/,
+    );
+    if (horizontalRuleMatch && isLineBreakInput(event)) {
+      isApplyingAutoMarkdownRef.current = true;
+      const converted = runHorizontalRuleFromMarkdown(block);
+
+      window.setTimeout(() => {
+        isApplyingAutoMarkdownRef.current = false;
+      }, 0);
+
+      return converted;
+    }
 
     // Heading estilo Notion: converte em "## " e mantém quando vira "## Título"
     const headingEmptyMatch = rawLine.match(/^\s{0,3}(#{1,4})\s$/);

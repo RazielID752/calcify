@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { normalizeEditorContentStructure } from "./editor-content-utils";
 
 const DEFAULT_STORAGE_KEY = "customRichEditorHtml";
 
@@ -23,6 +24,24 @@ const moveCaretToEnd = (element: HTMLElement) => {
   selection.addRange(range);
 };
 
+const saveHtmlValueToStorage = (
+  storageKey: string | null | undefined,
+  nextHtml: string,
+  lastSavedHtmlRef: { current: string },
+) => {
+  if (!storageKey) {
+    lastSavedHtmlRef.current = nextHtml;
+    return;
+  }
+
+  try {
+    localStorage.setItem(storageKey, nextHtml);
+    lastSavedHtmlRef.current = nextHtml;
+  } catch {
+    // Ignore storage errors (quota/private mode) to avoid breaking editor usage.
+  }
+};
+
 export function useEditorSession(options: UseEditorSessionOptions = {}) {
   const { storageKey = DEFAULT_STORAGE_KEY, initialHtml = "" } = options;
 
@@ -33,17 +52,7 @@ export function useEditorSession(options: UseEditorSessionOptions = {}) {
 
   const saveHtmlToStorage = useCallback(
     (nextHtml: string) => {
-      if (!storageKey) {
-        lastSavedHtmlRef.current = nextHtml;
-        return;
-      }
-
-      try {
-        localStorage.setItem(storageKey, nextHtml);
-        lastSavedHtmlRef.current = nextHtml;
-      } catch {
-        // Ignore storage errors (quota/private mode) to avoid breaking editor usage.
-      }
+      saveHtmlValueToStorage(storageKey, nextHtml, lastSavedHtmlRef);
     },
     [storageKey],
   );
@@ -73,7 +82,14 @@ export function useEditorSession(options: UseEditorSessionOptions = {}) {
     }
 
     editor.innerHTML = html;
-  }, [html]);
+    const changed = normalizeEditorContentStructure(editor);
+
+    if (changed) {
+      const normalizedHtml = editor.innerHTML;
+      setHtml(normalizedHtml);
+      saveHtmlValueToStorage(storageKey, normalizedHtml, lastSavedHtmlRef);
+    }
+  }, [html, storageKey]);
 
   const updateSavedRange = useCallback(() => {
     const selection = window.getSelection();
@@ -97,6 +113,8 @@ export function useEditorSession(options: UseEditorSessionOptions = {}) {
     if (!editor) {
       return;
     }
+
+    normalizeEditorContentStructure(editor);
 
     const nextHtml = editor.innerHTML;
     setHtml(nextHtml);
@@ -125,8 +143,11 @@ export function useEditorSession(options: UseEditorSessionOptions = {}) {
       }
 
       editor.innerHTML = nextHtml;
-      setHtml(nextHtml);
-      saveHtmlToStorage(nextHtml);
+      normalizeEditorContentStructure(editor);
+
+      const normalizedHtml = editor.innerHTML;
+      setHtml(normalizedHtml);
+      saveHtmlToStorage(normalizedHtml);
       restoreSelectionToEnd();
     },
     [restoreSelectionToEnd, saveHtmlToStorage],
@@ -143,6 +164,8 @@ export function useEditorSession(options: UseEditorSessionOptions = {}) {
       if (!editor) {
         return;
       }
+
+      normalizeEditorContentStructure(editor);
 
       const nextHtml = editor.innerHTML;
 

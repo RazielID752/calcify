@@ -35,7 +35,10 @@ export default function DocumentTabsStrip({
   return (
     <TooltipProvider>
       <div className="sticky top-0 z-30 -mx-3 mb-3 border-b border-zinc-200/80 bg-zinc-50/95 px-3 pt-2 pb-1.5 backdrop-blur sm:-mx-6 sm:bg-white/90 sm:px-6 sm:py-2">
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-2">
+        <div
+          data-tour="document-tabs"
+          className="mx-auto flex w-full max-w-7xl items-center gap-2"
+        >
           <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Tabs
               value={activeDocumentId}
@@ -116,6 +119,7 @@ export default function DocumentTabsStrip({
                 type="button"
                 variant="outline"
                 size="icon-lg"
+                data-tour="create-document"
                 onClick={onOpenCreateDialog}
                 aria-label="Criar novo documento"
                 className="size-10 shrink-0 rounded-full border-zinc-200 bg-white text-emerald-700 shadow-sm hover:bg-emerald-50 sm:size-8 sm:bg-emerald-200/50 sm:hover:bg-emerald-200"

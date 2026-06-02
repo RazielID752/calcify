@@ -6,8 +6,6 @@ import {
   ChevronDown,
   Code,
   Eraser,
-  FileText,
-  Globe2,
   Highlighter,
   ImagePlus,
   Italic,
@@ -15,12 +13,10 @@ import {
   List,
   ListOrdered,
   type LucideIcon,
-  Menu,
   MoreHorizontal,
   Plus,
   Quote,
   Redo2,
-  Save,
   SquareCode,
   Strikethrough,
   Subscript,
@@ -131,12 +127,6 @@ function ToolbarPreviewSelect({
   );
 }
 
-const menuItems = [
-  { label: "Ver documentos", icon: FileText },
-  { label: "Ir para o site", icon: Globe2 },
-  { label: "Salvar", icon: Save },
-];
-
 export default function ProductScene() {
   return (
     <div className="calcify-scale-in relative mx-auto mt-10 w-full max-w-6xl overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-950 p-2 shadow-2xl shadow-zinc-950/20 sm:mt-14 sm:p-3">
@@ -197,6 +187,7 @@ export default function ProductScene() {
                     width={80}
                     height={80}
                     className="ml-2"
+                    style={{ height: "auto" }}
                   />
                 </div>
 

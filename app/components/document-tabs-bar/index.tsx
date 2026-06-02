@@ -15,7 +15,7 @@ type DocumentTabsBarProps = {
   defaultDocumentTitle: string;
   onActiveDocumentChange: (id: string) => void;
   onOpenCreateDialog: () => void;
-  onCreateDocument: (title: string) => void;
+  onCreateDocument: (title: string, content?: string) => void;
   onRenameDocument: (id: string, title: string) => void;
   onCloseDocument: (id: string) => void;
   onCreateDialogOpenChange: (open: boolean) => void;

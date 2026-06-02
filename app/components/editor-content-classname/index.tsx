@@ -4,6 +4,7 @@ export const EDITOR_CONTENT_CLASSNAME = [
   "[&_blockquote]:border-emerald-300",
   "[&_blockquote]:pl-4",
   "[&_blockquote]:text-black",
+  "[&_blockquote]:my-4",
   "[&_a]:font-medium",
   "[&_a]:text-blue-600",
   "[&_a]:underline",

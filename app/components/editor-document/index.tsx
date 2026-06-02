@@ -122,16 +122,17 @@ export const createDocumentId = () =>
 
 export const createBlankDocument = (
   initialTitle = "",
-  options?: { fixedId?: string },
+  options?: { fixedId?: string; content?: string },
 ): Document => {
   const normalizedTitle = trimAndCollapseWhitespace(initialTitle);
   const fixedId = options?.fixedId;
+  const content = options?.content ?? "";
 
   return {
     id: fixedId ?? createDocumentId(),
     title: normalizedTitle || DEFAULT_DOCUMENT_TITLE,
-    content: "",
+    content,
     createdAt: fixedId ? new Date(0) : new Date(),
-    titleMode: normalizedTitle ? "manual" : "auto",
+    titleMode: normalizedTitle || content ? "manual" : "auto",
   };
 };

@@ -9,6 +9,14 @@ type UseEditorEmptyStateOptions = {
   moveCursorToEnd: (element: HTMLElement) => void;
 };
 
+const getElementText = (element: HTMLElement | null) =>
+  element?.textContent?.replaceAll("\u00A0", " ").trim() ?? "";
+
+const getBodyElements = (
+  rootChildren: HTMLElement[],
+  titleElement: HTMLElement | null,
+) => (titleElement ? rootChildren.slice(1) : rootChildren);
+
 export const useEditorEmptyState = ({
   editorRef,
   moveCursorToEnd,
@@ -83,30 +91,29 @@ export const useEditorEmptyState = ({
       firstChild instanceof HTMLElement && firstChild.tagName === "H1"
         ? firstChild
         : null;
-    const bodyElement = titleElement
-      ? (rootChildren[1] ?? null)
-      : (firstChild ?? null);
+    const bodyElements = getBodyElements(rootChildren, titleElement);
 
-    const titleText =
-      titleElement?.textContent?.replaceAll("\u00A0", " ").trim() ?? "";
-    const bodyText =
-      bodyElement?.textContent?.replaceAll("\u00A0", " ").trim() ?? "";
-    const bodyHasMeaningfulContent = bodyElement
-      ? hasMeaningfulEditorContent(bodyElement.innerHTML)
-      : false;
+    const titleText = getElementText(titleElement);
+    const bodyText = bodyElements.map(getElementText).join(" ").trim();
+    const bodyHtml = bodyElements
+      .map((bodyElement) => bodyElement.outerHTML)
+      .join("");
+    const bodyHasMeaningfulContent = hasMeaningfulEditorContent(bodyHtml);
 
     const selection = window.getSelection();
     const hasCaretInBody = Boolean(
       selection &&
         selection.rangeCount > 0 &&
-        bodyElement &&
-        (bodyElement.contains(selection.anchorNode) ||
-          bodyElement === selection.anchorNode ||
-          bodyElement.contains(selection.focusNode) ||
-          bodyElement === selection.focusNode),
+        bodyElements.some(
+          (bodyElement) =>
+            bodyElement.contains(selection.anchorNode) ||
+            bodyElement === selection.anchorNode ||
+            bodyElement.contains(selection.focusNode) ||
+            bodyElement === selection.focusNode,
+        ),
     );
 
-    setIsTitleEmpty(titleText.length === 0);
+    setIsTitleEmpty(Boolean(titleElement && titleText.length === 0));
     setIsBodyEmpty(
       !bodyHasMeaningfulContent && bodyText.length === 0 && !hasCaretInBody,
     );

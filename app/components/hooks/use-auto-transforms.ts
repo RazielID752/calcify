@@ -229,10 +229,13 @@ export function useAutoTransforms({
         anchorNode.nodeType === Node.TEXT_NODE &&
         anchorNode.parentNode === editor
       ) {
-        const heading = document.createElement("h1");
-        editor.insertBefore(heading, anchorNode);
-        heading.appendChild(anchorNode);
-        return heading;
+        const shouldCreateTitle = editor.children.length === 0;
+        const blockElement = document.createElement(
+          shouldCreateTitle ? "h1" : "p",
+        );
+        editor.insertBefore(blockElement, anchorNode);
+        blockElement.appendChild(anchorNode);
+        return blockElement;
       }
 
       if (anchorElement === editor) {

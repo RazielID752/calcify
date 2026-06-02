@@ -231,13 +231,18 @@ export const useEditorDocuments = () => {
     setIsCreateDialogOpen(true);
   }, []);
 
-  const handleCreateDocument = useCallback((initialTitle: string) => {
-    const newDocument = createBlankDocument(initialTitle);
+  const handleCreateDocument = useCallback(
+    (initialTitle: string, initialContent?: string) => {
+      const newDocument = createBlankDocument(initialTitle, {
+        content: initialContent,
+      });
 
-    setDocuments((previousDocuments) => [...previousDocuments, newDocument]);
-    setActiveDocumentId(newDocument.id);
-    setIsCreateDialogOpen(false);
-  }, []);
+      setDocuments((previousDocuments) => [...previousDocuments, newDocument]);
+      setActiveDocumentId(newDocument.id);
+      setIsCreateDialogOpen(false);
+    },
+    [],
+  );
 
   const handleCloseDocument = useCallback(
     (documentId: string) => {

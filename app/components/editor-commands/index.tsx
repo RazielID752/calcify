@@ -430,6 +430,119 @@ const formatSelectionAsParagraph = () => {
   }
 };
 
+const moveSelectionToEnd = (element: HTMLElement) => {
+  const selection = window.getSelection();
+
+  if (!selection) {
+    return;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
+const replaceBlockElementTag = (block: HTMLElement, tagName: string) => {
+  const nextBlock = document.createElement(tagName);
+
+  for (const attribute of block.getAttributeNames()) {
+    if (attribute === "style" || attribute === "class") {
+      continue;
+    }
+
+    const value = block.getAttribute(attribute);
+
+    if (value !== null) {
+      nextBlock.setAttribute(attribute, value);
+    }
+  }
+
+  while (block.firstChild) {
+    nextBlock.appendChild(block.firstChild);
+  }
+
+  block.replaceWith(nextBlock);
+  moveSelectionToEnd(nextBlock);
+  return nextBlock;
+};
+
+const normalizeBlockquoteContent = (blockquote: HTMLElement) => {
+  for (const child of [...blockquote.children]) {
+    if (
+      child instanceof HTMLElement &&
+      ["H1", "H2", "H3", "H4"].includes(child.tagName)
+    ) {
+      unwrapElement(child);
+    }
+  }
+};
+
+const unwrapBlockquoteFromHeading = (blockquote: HTMLElement) => {
+  const headingParent = blockquote.parentElement;
+
+  if (
+    !headingParent ||
+    !["H1", "H2", "H3", "H4"].includes(headingParent.tagName)
+  ) {
+    return blockquote;
+  }
+
+  const nextBlockquote = document.createElement("blockquote");
+
+  while (blockquote.firstChild) {
+    nextBlockquote.appendChild(blockquote.firstChild);
+  }
+
+  headingParent.replaceWith(nextBlockquote);
+  moveSelectionToEnd(nextBlockquote);
+  return nextBlockquote;
+};
+
+const formatSelectionAsBlockquote = (context: EditorContext) => {
+  const originalBlock = getClosestBlockElement(context);
+  let lastAppliedBlock: HTMLElement | null = null;
+
+  if (
+    originalBlock instanceof HTMLElement &&
+    ["H1", "H2", "H3", "H4"].includes(originalBlock.tagName)
+  ) {
+    normalizeBlockquoteContent(
+      replaceBlockElementTag(originalBlock, "blockquote"),
+    );
+    return;
+  }
+
+  for (const option of ["BLOCKQUOTE", "blockquote", "<blockquote>"]) {
+    if (!document.execCommand("formatBlock", false, option)) {
+      continue;
+    }
+
+    const appliedBlock = getClosestBlockElement(context);
+    lastAppliedBlock = appliedBlock;
+    const appliedBlockquote =
+      appliedBlock?.tagName === "BLOCKQUOTE"
+        ? appliedBlock
+        : appliedBlock?.closest("blockquote");
+
+    if (appliedBlockquote instanceof HTMLElement) {
+      normalizeBlockquoteContent(
+        unwrapBlockquoteFromHeading(appliedBlockquote),
+      );
+      return;
+    }
+  }
+
+  const blockToReplace = lastAppliedBlock ?? originalBlock;
+
+  if (blockToReplace instanceof HTMLElement) {
+    normalizeBlockquoteContent(
+      replaceBlockElementTag(blockToReplace, "blockquote"),
+    );
+  }
+};
+
 export const editorCommands = {
   undo(context: EditorContext) {
     runHistoryCommand(context, "undo");
@@ -496,7 +609,7 @@ export const editorCommands = {
       }
     }
 
-    runExecCommand(context, "formatBlock", "blockquote");
+    formatSelectionAsBlockquote(context);
   },
   codeBlock(context: EditorContext) {
     runExecCommand(context, "formatBlock", "pre");

@@ -3,11 +3,15 @@ import axios, { type AxiosError } from "axios";
 export const DEFAULT_API_BASE_URL =
   "https://api-calcify-production.up.railway.app";
 
+const DESKTOP_API_PROXY_BASE_URL = "/__calcify_api";
+const DESKTOP_USER_AGENT_MARKER = "CalcifyDesktop";
+
 export const resolveApiBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(
-    /\/+$/,
-    "",
-  );
+  (typeof window !== "undefined" &&
+  window.navigator.userAgent.includes(DESKTOP_USER_AGENT_MARKER)
+    ? DESKTOP_API_PROXY_BASE_URL
+    : (process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL)
+  ).replace(/\/+$/, "");
 
 export const apiClient = axios.create({
   baseURL: resolveApiBaseUrl(),

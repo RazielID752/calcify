@@ -7,6 +7,12 @@ const { app, BrowserWindow, dialog, shell } = require("electron");
 const DEV_URL = process.env.ELECTRON_START_URL;
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.ELECTRON_PORT || 43110);
+const API_PROXY_PREFIX = "/__calcify_api";
+const API_BASE_URL = (
+  process.env.CALCIFY_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://api-calcify-production.up.railway.app"
+).replace(/\/+$/, "");
 const APP_ICON_PATH = path.join(
   app.getAppPath(),
   "assets",
@@ -38,6 +44,56 @@ const contentTypes = {
 function getContentType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   return contentTypes[ext] || "application/octet-stream";
+}
+
+function readRequestBody(request) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+
+    request.on("data", (chunk) => {
+      chunks.push(chunk);
+    });
+    request.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+    request.on("error", reject);
+  });
+}
+
+function buildProxyHeaders(request) {
+  const headers = { ...request.headers };
+
+  delete headers.host;
+  delete headers.origin;
+  delete headers.referer;
+
+  return headers;
+}
+
+async function proxyApiRequest(request, response, requestUrl) {
+  const targetPath = `${requestUrl.pathname.slice(API_PROXY_PREFIX.length)}${
+    requestUrl.search
+  }`;
+  const targetUrl = `${API_BASE_URL}${targetPath || "/"}`;
+  const method = request.method || "GET";
+  const hasRequestBody = !["GET", "HEAD"].includes(method);
+
+  const apiResponse = await fetch(targetUrl, {
+    method,
+    headers: buildProxyHeaders(request),
+    body: hasRequestBody ? await readRequestBody(request) : undefined,
+  });
+
+  const responseHeaders = {};
+
+  apiResponse.headers.forEach((value, key) => {
+    if (key !== "set-cookie") {
+      responseHeaders[key] = value;
+    }
+  });
+
+  response.writeHead(apiResponse.status, responseHeaders);
+  response.end(Buffer.from(await apiResponse.arrayBuffer()));
 }
 
 async function pathExists(filePath) {
@@ -88,6 +144,12 @@ async function startStaticServer() {
   staticServer = http.createServer(async (request, response) => {
     try {
       const requestUrl = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+
+      if (requestUrl.pathname.startsWith(API_PROXY_PREFIX)) {
+        await proxyApiRequest(request, response, requestUrl);
+        return;
+      }
+
       const filePath = await resolveStaticPath(baseDir, requestUrl.pathname);
 
       if (!filePath) {
@@ -248,6 +310,10 @@ async function createMainWindow() {
       sandbox: true,
     },
   });
+
+  mainWindow.webContents.setUserAgent(
+    `${mainWindow.webContents.getUserAgent()} CalcifyDesktop`,
+  );
 
   if (DEV_URL) {
     await mainWindow.loadURL(DEV_URL);

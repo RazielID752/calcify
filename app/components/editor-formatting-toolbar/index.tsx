@@ -29,6 +29,7 @@ type EditorFormattingToolbarProps = {
   onList: (type: ListType) => void;
   onMathChange: (value: string) => void;
   onRenderMarkdown: () => void;
+  onTable: () => void;
   onUndo: () => void;
   run: RunEditorCommand;
 };
@@ -46,6 +47,7 @@ export default function EditorFormattingToolbar({
   onList,
   onMathChange,
   onRenderMarkdown,
+  onTable,
   onUndo,
   run,
 }: EditorFormattingToolbarProps) {
@@ -77,6 +79,7 @@ export default function EditorFormattingToolbar({
       onAlignCenter={() => onAlign("center")}
       onAlignRight={() => onAlign("right")}
       onImage={onImage}
+      onTable={onTable}
       onMathChange={onMathChange}
       onInsertEquals={() => onInsertMathShortcut(" = ")}
       onInsertSqrt={() => onInsertMathShortcut("sqrt()")}

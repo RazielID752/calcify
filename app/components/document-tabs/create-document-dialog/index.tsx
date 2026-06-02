@@ -589,10 +589,10 @@ export default function CreateDocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100svh-1rem)] w-[calc(100%-1rem)] flex-col overflow-hidden p-0 sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100%-2rem)] sm:max-w-5xl">
-        <DialogHeader className="shrink-0 border-b border-zinc-200/80 bg-zinc-50/70 px-4 py-4 sm:px-6 sm:py-5">
+      <DialogContent className="flex h-[calc(100svh-1rem)] w-[calc(100%-1rem)] flex-col overflow-hidden p-0 sm:h-auto sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100%-2rem)] sm:max-w-5xl">
+        <DialogHeader className="shrink-0 border-b border-zinc-200/80 bg-zinc-50/70 px-4 py-3 sm:px-6 sm:py-5">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+            <div className="hidden size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 sm:flex">
               <Sparkles className="size-4.5" />
             </div>
 
@@ -606,8 +606,8 @@ export default function CreateDocumentDialog({
         </DialogHeader>
 
         <div className="grid min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
-            <div className="space-y-4 rounded-lg border border-emerald-200/80 bg-emerald-50/50 p-4">
+          <div className="min-h-0 overflow-y-auto px-4 py-3 sm:px-6 sm:py-5">
+            <div className="space-y-3 rounded-lg border border-emerald-200/80 bg-emerald-50/50 p-3 sm:space-y-4 sm:p-4">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex size-8 items-center justify-center rounded-md bg-emerald-100 text-emerald-700">
                   <FileText className="size-4" />
@@ -616,7 +616,7 @@ export default function CreateDocumentDialog({
                   <p className="text-sm font-semibold text-zinc-900">
                     Criar documento em branco
                   </p>
-                  <p className="text-xs text-zinc-600">
+                  <p className="hidden text-xs text-zinc-600 sm:block">
                     Uma página limpa para começar do zero.
                   </p>
                 </div>
@@ -668,7 +668,7 @@ export default function CreateDocumentDialog({
                   <p className="text-sm font-semibold text-zinc-900">
                     Galeria de modelos
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="hidden text-xs text-zinc-500 sm:block">
                     Estruturas prontas para acelerar seu trabalho.
                   </p>
                 </div>
@@ -677,7 +677,7 @@ export default function CreateDocumentDialog({
                 </span>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 sm:gap-3 sm:grid-cols-2">
                 {templates.map((template) => {
                   const TemplateIcon = template.icon;
                   const isSelected = selectedTemplate?.id === template.id;
@@ -697,7 +697,7 @@ export default function CreateDocumentDialog({
                         className={`h-2 bg-gradient-to-r ${template.accentClassName}`}
                       />
                       <div className="p-3">
-                        <div className="mb-3 flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-3 sm:mb-3">
                           <div className="flex min-w-0 items-center gap-2">
                             <div className="grid size-8 shrink-0 place-items-center rounded-md bg-zinc-100 text-zinc-700 group-hover:bg-emerald-50 group-hover:text-emerald-700">
                               <TemplateIcon className="size-4" />
@@ -711,14 +711,22 @@ export default function CreateDocumentDialog({
                               </p>
                             </div>
                           </div>
-                          {isSelected ? (
-                            <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
-                          ) : null}
+                          <div className="flex shrink-0 items-center gap-2">
+                            {isSelected ? (
+                              <CheckCircle2 className="size-4 text-emerald-600" />
+                            ) : null}
+                            <span
+                              className="inline-flex h-8 items-center justify-center rounded-md bg-emerald-600 px-2 text-xs font-medium text-white sm:hidden"
+                              aria-hidden
+                            >
+                              Usar
+                            </span>
+                          </div>
                         </div>
-                        <p className="line-clamp-2 text-xs leading-5 text-zinc-600">
+                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-600 sm:mt-0">
                           {template.description}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-1.5">
+                        <div className="mt-3 hidden flex-wrap gap-1.5 sm:flex">
                           {template.previewItems.slice(0, 2).map((item) => (
                             <span
                               key={item}
@@ -736,7 +744,7 @@ export default function CreateDocumentDialog({
             </div>
           </div>
 
-          <aside className="min-h-0 border-zinc-200 border-t bg-zinc-50/80 p-4 sm:p-6 lg:border-t-0 lg:border-l">
+          <aside className="hidden min-h-0 border-zinc-200 border-t bg-zinc-50/80 p-4 sm:p-6 lg:flex lg:border-t-0 lg:border-l">
             {selectedTemplate ? (
               <div className="flex h-full min-h-0 flex-col">
                 <div className="mb-4 flex items-start justify-between gap-3">

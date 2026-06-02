@@ -793,6 +793,23 @@ export const editorCommands = {
 
     runExecCommand(context, "insertHTML", imageHtml);
   },
+  table(context: EditorContext) {
+    const tableHtml = [
+      "<table>",
+      "<thead>",
+      "<tr><th>Item</th><th>Responsável</th><th>Status</th></tr>",
+      "</thead>",
+      "<tbody>",
+      "<tr><td>Planejamento</td><td>Equipe</td><td>Em andamento</td></tr>",
+      "<tr><td>Execução</td><td>Responsável</td><td>Pendente</td></tr>",
+      "<tr><td>Revisão</td><td>Cliente</td><td>Não iniciado</td></tr>",
+      "</tbody>",
+      "</table>",
+      "<p><br></p>",
+    ].join("");
+
+    runExecCommand(context, "insertHTML", tableHtml);
+  },
   removeImage(context: EditorContext) {
     restoreSelection(context);
 

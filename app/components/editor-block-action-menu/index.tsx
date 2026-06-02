@@ -11,6 +11,7 @@ import {
   Pilcrow,
   Quote,
   Sigma,
+  Table,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export type EditorBlockAction =
   | "orderedList"
   | "blockquote"
   | "codeBlock"
+  | "table"
   | "image"
   | "calculation";
 
@@ -79,6 +81,11 @@ const blockActions: Array<{
     id: "codeBlock",
     label: "Código",
     icon: Code,
+  },
+  {
+    id: "table",
+    label: "Tabela",
+    icon: Table,
   },
   {
     id: "image",

@@ -19,6 +19,7 @@ import {
   Strikethrough,
   Subscript,
   Superscript,
+  Table,
   Underline,
   Undo2,
 } from "lucide-react";
@@ -78,6 +79,7 @@ type EditorToolbarProps = {
   onAlignCenter: () => void;
   onAlignRight: () => void;
   onImage: () => void;
+  onTable: () => void;
   onMathChange: (value: string) => void;
   onInsertEquals: () => void;
   onInsertSqrt: () => void;
@@ -133,6 +135,7 @@ export default function EditorToolbar({
   onAlignCenter,
   onAlignRight,
   onImage,
+  onTable,
   onMathChange,
 }: EditorToolbarProps) {
   const activeButtonClass =
@@ -407,6 +410,16 @@ export default function EditorToolbar({
                 onClick={onImage}
               >
                 <ImagePlus />
+              </ToolbarActionButton>
+              <ToolbarActionButton
+                tooltip="Inserir tabela"
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onMouseDown={stopFocusLoss}
+                onClick={onTable}
+              >
+                <Table />
               </ToolbarActionButton>
               {/* <Button
                 type="button"

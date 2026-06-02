@@ -852,6 +852,9 @@ export default function Editor() {
         case "codeBlock":
           run((context) => editorCommands.codeBlock(context));
           return;
+        case "table":
+          run((context) => editorCommands.table(context));
+          return;
         case "image":
           handleImage();
           return;
@@ -1033,6 +1036,7 @@ export default function Editor() {
           onList={handleList}
           onMathChange={handleMathChange}
           onRenderMarkdown={handleRenderMarkdown}
+          onTable={() => run((context) => editorCommands.table(context))}
           onUndo={handleUndo}
         />
 

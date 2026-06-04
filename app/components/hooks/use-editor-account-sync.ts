@@ -30,6 +30,9 @@ import {
   DEFAULT_DOCUMENT_TITLE,
   type Document,
   FIRST_ACCESS_WELCOME_KEY,
+  hasMeaningfulEditorContent,
+  isDefaultDocumentTitle,
+  shouldSaveDocument,
 } from "../editor-document";
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
@@ -204,10 +207,21 @@ export const useEditorAccountSync = ({
         }
 
         didDetachDocument = true;
+        const titleWasEditedByUser =
+          documentItem.titleMode === "manual" &&
+          !isDefaultDocumentTitle(documentItem.title);
+        const contentWasEditedByUser = hasMeaningfulEditorContent(
+          documentItem.content,
+        );
 
         return {
           ...documentItem,
           id: localDocumentId,
+          isPersisted: false,
+          isDirty: true,
+          hasUserEdited: true,
+          titleWasEditedByUser,
+          contentWasEditedByUser,
           clientDocumentId: documentItem.clientDocumentId ?? localDocumentId,
           serverUpdatedAt: undefined,
         };
@@ -244,10 +258,21 @@ export const useEditorAccountSync = ({
       const localDocumentId =
         replacementIdByDocumentId.get(documentItem.id) ?? createDocumentId();
       replacementIdByDocumentId.set(documentItem.id, localDocumentId);
+      const titleWasEditedByUser =
+        documentItem.titleMode === "manual" &&
+        !isDefaultDocumentTitle(documentItem.title);
+      const contentWasEditedByUser = hasMeaningfulEditorContent(
+        documentItem.content,
+      );
 
       return {
         ...documentItem,
         id: localDocumentId,
+        isPersisted: false,
+        isDirty: true,
+        hasUserEdited: true,
+        titleWasEditedByUser,
+        contentWasEditedByUser,
         clientDocumentId: documentItem.clientDocumentId ?? localDocumentId,
         serverUpdatedAt: undefined,
       };
@@ -369,6 +394,11 @@ export const useEditorAccountSync = ({
                     : (savedDocument.content ?? ""),
                   serverUpdatedAt: savedDocument.updatedAt,
                   titleMode: "manual" as const,
+                  isPersisted: true,
+                  isDirty: hasNewerLocalChanges,
+                  hasUserEdited: documentItem.hasUserEdited,
+                  titleWasEditedByUser: documentItem.titleWasEditedByUser,
+                  contentWasEditedByUser: documentItem.contentWasEditedByUser,
                 };
               }
 
@@ -398,6 +428,11 @@ export const useEditorAccountSync = ({
                   : (savedDocument.content ?? ""),
                 serverUpdatedAt: savedDocument.updatedAt,
                 titleMode: "manual" as const,
+                isPersisted: true,
+                isDirty: hasNewerLocalChanges,
+                hasUserEdited: documentItem.hasUserEdited,
+                titleWasEditedByUser: documentItem.titleWasEditedByUser,
+                contentWasEditedByUser: documentItem.contentWasEditedByUser,
               };
             })
             .filter((documentItem): documentItem is Document => {
@@ -474,6 +509,14 @@ export const useEditorAccountSync = ({
       const targetDocumentId = documentId ?? activeDocumentIdRef.current;
 
       if (!targetDocumentId) {
+        return;
+      }
+
+      const currentDocument = documentsRef.current.find(
+        (documentItem) => documentItem.id === targetDocumentId,
+      );
+
+      if (!currentDocument || !shouldSaveDocument(currentDocument)) {
         return;
       }
 
@@ -628,6 +671,11 @@ export const useEditorAccountSync = ({
           createdAt: new Date(item.createdAt),
           serverUpdatedAt: item.updatedAt,
           titleMode: "manual" as const,
+          isPersisted: true,
+          isDirty: false,
+          hasUserEdited: false,
+          titleWasEditedByUser: false,
+          contentWasEditedByUser: false,
         }));
 
         serverUpdatedAtByDocumentIdRef.current = Object.fromEntries(
@@ -741,11 +789,15 @@ export const useEditorAccountSync = ({
 
   useEffect(() => {
     const flushExistingServerDocument = () => {
-      if (!isGuid(activeDocumentIdRef.current)) {
+      const currentDocument = documentsRef.current.find(
+        (documentItem) => documentItem.id === activeDocumentIdRef.current,
+      );
+
+      if (!currentDocument || !shouldSaveDocument(currentDocument)) {
         return;
       }
 
-      flushAutosave();
+      flushAutosave(activeDocumentIdRef.current);
     };
 
     const handleVisibilityChange = () => {

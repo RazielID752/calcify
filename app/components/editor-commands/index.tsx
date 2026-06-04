@@ -543,6 +543,35 @@ const formatSelectionAsBlockquote = (context: EditorContext) => {
   }
 };
 
+const unwrapListFromBlock = (context: EditorContext) => {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const anchorElement = getSelectionElement(selection.anchorNode);
+  const list = anchorElement?.closest("ul,ol");
+
+  if (!(list instanceof HTMLElement)) {
+    return;
+  }
+
+  const parent = list.parentElement;
+
+  if (!parent || !["P", "DIV"].includes(parent.tagName)) {
+    return;
+  }
+
+  if (parent.children.length !== 1 || parent.firstElementChild !== list) {
+    return;
+  }
+
+  parent.replaceWith(list);
+  moveSelectionToEnd(list);
+  restoreSelection(context);
+};
+
 export const editorCommands = {
   undo(context: EditorContext) {
     runHistoryCommand(context, "undo");
@@ -591,6 +620,7 @@ export const editorCommands = {
       context,
       type === "bullet" ? "insertUnorderedList" : "insertOrderedList",
     );
+    unwrapListFromBlock(context);
   },
   blockquote(context: EditorContext) {
     restoreSelection(context);

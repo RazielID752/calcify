@@ -6,6 +6,11 @@ export type Document = {
   createdAt: Date;
   serverUpdatedAt?: string;
   titleMode: "auto" | "manual";
+  isPersisted: boolean;
+  isDirty: boolean;
+  hasUserEdited: boolean;
+  titleWasEditedByUser: boolean;
+  contentWasEditedByUser: boolean;
 };
 
 export const DEFAULT_DOCUMENT_TITLE = "documento sem título";
@@ -84,6 +89,36 @@ export const hasMeaningfulEditorContent = (html: string) => {
   );
 };
 
+export const isEditorContentEmpty = (html: string) =>
+  !hasMeaningfulEditorContent(html);
+
+export const isDefaultDocumentTitle = (value: string) =>
+  value.trim().toLowerCase() === DEFAULT_DOCUMENT_TITLE;
+
+export const shouldCreateDocument = (documentItem: Document) => {
+  if (documentItem.isPersisted) {
+    return false;
+  }
+
+  const title = documentItem.title.trim();
+  const hasCustomTitle =
+    documentItem.titleWasEditedByUser &&
+    title.length > 0 &&
+    !isDefaultDocumentTitle(title);
+
+  const hasContent = !isEditorContentEmpty(documentItem.content ?? "");
+
+  return documentItem.hasUserEdited && (hasCustomTitle || hasContent);
+};
+
+export const shouldSaveDocument = (documentItem: Document) => {
+  if (documentItem.isPersisted) {
+    return documentItem.isDirty;
+  }
+
+  return shouldCreateDocument(documentItem);
+};
+
 const shortenTitle = (value: string) => {
   const normalized = trimAndCollapseWhitespace(value);
 
@@ -102,7 +137,7 @@ export const getAutoTitleFromContent = (content: string) => {
   const container = document.createElement("div");
   container.innerHTML = content;
 
-  const firstHeading = container.querySelector("h1");
+  const firstHeading = container.querySelector("h1,h2,h3,h4");
   const headingText = trimAndCollapseWhitespace(
     firstHeading?.textContent ?? "",
   );
@@ -122,17 +157,31 @@ export const createDocumentId = () =>
 
 export const createBlankDocument = (
   initialTitle = "",
-  options?: { fixedId?: string; content?: string },
+  options?: {
+    fixedId?: string;
+    content?: string;
+    isPersisted?: boolean;
+    titleWasEditedByUser?: boolean;
+    contentWasEditedByUser?: boolean;
+  },
 ): Document => {
   const normalizedTitle = trimAndCollapseWhitespace(initialTitle);
   const fixedId = options?.fixedId;
   const content = options?.content ?? "";
+  const titleEditedByUser = Boolean(options?.titleWasEditedByUser);
+  const contentEditedByUser = Boolean(options?.contentWasEditedByUser);
+  const hasUserEdited = titleEditedByUser || contentEditedByUser;
 
   return {
     id: fixedId ?? createDocumentId(),
     title: normalizedTitle || DEFAULT_DOCUMENT_TITLE,
     content,
     createdAt: fixedId ? new Date(0) : new Date(),
-    titleMode: normalizedTitle || content ? "manual" : "auto",
+    titleMode: normalizedTitle ? "manual" : "auto",
+    isPersisted: options?.isPersisted ?? false,
+    isDirty: false,
+    hasUserEdited,
+    titleWasEditedByUser: titleEditedByUser,
+    contentWasEditedByUser: contentEditedByUser,
   };
 };

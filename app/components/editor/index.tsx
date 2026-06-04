@@ -269,7 +269,7 @@ export default function Editor() {
       getCurrentHtml: getCurrentEditorHtml,
       restoreHtml: (html) => {
         applyExternalHtml(html);
-        updateActiveDocumentContent(html);
+        updateActiveDocumentContent(html, { isUserEdit: true });
       },
     });
 
@@ -277,7 +277,7 @@ export default function Editor() {
     persistHtml();
 
     const nextHtml = getCurrentEditorHtml();
-    updateActiveDocumentContent(nextHtml);
+    updateActiveDocumentContent(nextHtml, { isUserEdit: true });
     recordHistorySnapshot(nextHtml);
   }, [
     getCurrentEditorHtml,
@@ -374,6 +374,11 @@ export default function Editor() {
               createdAt: new Date(documentItem.createdAt),
               serverUpdatedAt: documentItem.updatedAt,
               titleMode: "manual" as const,
+              isPersisted: true,
+              isDirty: false,
+              hasUserEdited: false,
+              titleWasEditedByUser: false,
+              contentWasEditedByUser: false,
             },
           ];
         });
@@ -407,7 +412,7 @@ export default function Editor() {
     (nextHtml: string) => {
       recordHistorySnapshot(nextHtml);
       applyExternalHtml(nextHtml);
-      updateActiveDocumentContent(nextHtml);
+      updateActiveDocumentContent(nextHtml, { isUserEdit: true });
     },
     [applyExternalHtml, recordHistorySnapshot, updateActiveDocumentContent],
   );

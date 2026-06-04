@@ -98,6 +98,11 @@ const toLibraryDocument = (item: DocumentApiResponse): LibraryDocument => ({
   isDraft: item.isDraft,
   source: "remote",
   titleMode: "manual",
+  isPersisted: true,
+  isDirty: false,
+  hasUserEdited: false,
+  titleWasEditedByUser: false,
+  contentWasEditedByUser: false,
 });
 
 const formatDate = (date: Date) => {

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Paste Debug</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: #f7f8fa;
+        color: #111827;
+      }
+
+      header {
+        padding: 24px 20px 8px;
+      }
+
+      h1 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: #4b5563;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        padding: 0 20px 24px;
+      }
+
+      .panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+      }
+
+      .panel h2 {
+        font-size: 14px;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+      }
+
+      .target {
+        min-height: 220px;
+        border: 2px dashed #93c5fd;
+        border-radius: 12px;
+        padding: 12px;
+        background: #eff6ff;
+      }
+
+      .target:focus {
+        outline: none;
+        border-color: #2563eb;
+        background: #e0e7ff;
+      }
+
+      textarea,
+      pre {
+        width: 100%;
+        min-height: 220px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        padding: 12px;
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 13px;
+        background: #f9fafb;
+        color: #111827;
+        box-sizing: border-box;
+      }
+
+      pre {
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 8px 14px;
+        background: #111827;
+        color: white;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      button.secondary {
+        background: #e5e7eb;
+        color: #111827;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Paste Debug</h1>
+      <p>Cole do ChatGPT/Word e etc aqui para capturar o HTML bruto e o texto.</p>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Area de Colar</h2>
+        <div class="target" contenteditable="true" spellcheck="false"></div>
+        <div class="actions">
+          <button id="clear">Limpar</button>
+          <button id="copy-html" class="secondary">Copiar HTML</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Clipboard HTML</h2>
+        <pre id="html"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>Clipboard Text</h2>
+        <pre id="text"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>HTML Interno</h2>
+        <pre id="dom"></pre>
+      </section>
+    </main>
+
+    <script>
+      const target = document.querySelector(".target");
+      const htmlOutput = document.querySelector("#html");
+      const textOutput = document.querySelector("#text");
+      const domOutput = document.querySelector("#dom");
+      const clearButton = document.querySelector("#clear");
+      const copyButton = document.querySelector("#copy-html");
+
+      const updateDomOutput = () => {
+        domOutput.textContent = target.innerHTML || "(vazio)";
+      };
+
+      target.addEventListener("paste", (event) => {
+        const html = event.clipboardData?.getData("text/html") || "";
+        const text = event.clipboardData?.getData("text/plain") || "";
+        htmlOutput.textContent = html || "(sem html)";
+        textOutput.textContent = text || "(sem texto)";
+        window.setTimeout(updateDomOutput, 0);
+      });
+
+      target.addEventListener("input", updateDomOutput);
+
+      clearButton.addEventListener("click", () => {
+        target.innerHTML = "";
+        htmlOutput.textContent = "";
+        textOutput.textContent = "";
+        domOutput.textContent = "";
+      });
+
+      copyButton.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(htmlOutput.textContent || "");
+        } catch (error) {
+          console.warn("Falha ao copiar HTML:", error);
+        }
+      });
+    </script>
+  </body>
+</html>

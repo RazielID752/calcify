@@ -504,6 +504,9 @@ export const useBlockDragAndDrop = ({
             return {
               ...documentItem,
               content: nextHtml,
+              isDirty: true,
+              hasUserEdited: true,
+              contentWasEditedByUser: true,
               title:
                 documentItem.titleMode === "manual"
                   ? documentItem.title
@@ -598,12 +601,20 @@ export const useBlockDragAndDrop = ({
       );
     };
 
+    const handleMouseLeaveWindow = () => {
+      clearHoveredDragBlock();
+    };
+
     window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseleave", handleMouseLeaveWindow);
+    window.addEventListener("blur", handleMouseLeaveWindow);
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseleave", handleMouseLeaveWindow);
+      window.removeEventListener("blur", handleMouseLeaveWindow);
     };
-  }, [updateHoveredDragHandleFromPointer]);
+  }, [clearHoveredDragBlock, updateHoveredDragHandleFromPointer]);
 
   useEffect(() => {
     return () => {

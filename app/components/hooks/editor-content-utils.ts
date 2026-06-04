@@ -3,9 +3,18 @@ export const getElementFromNode = (node: Node | null) => {
     return null;
   }
 
-  return node.nodeType === Node.TEXT_NODE
-    ? node.parentElement
-    : (node as Element);
+  const element =
+    node.nodeType === Node.TEXT_NODE
+      ? node.parentElement
+      : node instanceof HTMLElement
+        ? node
+        : node.parentElement;
+
+  if (element instanceof HTMLElement) {
+    return element;
+  }
+
+  return null;
 };
 
 const ROOT_BLOCK_TAGS = new Set([
@@ -24,10 +33,16 @@ const ROOT_BLOCK_TAGS = new Set([
 ]);
 
 const HEADING_TAGS = new Set(["H1", "H2", "H3", "H4"]);
+const ROOT_BLOCK_SELECTOR = [...ROOT_BLOCK_TAGS]
+  .map((tag) => tag.toLowerCase())
+  .join(",");
 
 const isBlankTextNode = (node: Node) =>
   node.nodeType === Node.TEXT_NODE &&
   (node.textContent ?? "").replaceAll("\u00A0", " ").trim().length === 0;
+
+const isIgnorableNode = (node: Node) =>
+  isBlankTextNode(node) || node instanceof HTMLBRElement;
 
 const isRootBlockElement = (node: Node): node is HTMLElement =>
   node instanceof HTMLElement && ROOT_BLOCK_TAGS.has(node.tagName);
@@ -81,6 +96,97 @@ const wrapRootTextNode = (editor: HTMLDivElement, node: ChildNode) => {
   return true;
 };
 
+const unwrapBlockElementsFromSpans = (editor: HTMLDivElement) => {
+  let changed = false;
+
+  for (const span of [...editor.querySelectorAll("span")]) {
+    if (!span.querySelector(ROOT_BLOCK_SELECTOR)) {
+      continue;
+    }
+
+    span.replaceWith(...span.childNodes);
+    changed = true;
+  }
+
+  return changed;
+};
+
+const unwrapListsFromBlocks = (editor: HTMLDivElement) => {
+  let changed = false;
+
+  for (const block of [...editor.querySelectorAll<HTMLElement>("p,div")]) {
+    if (block.parentElement !== editor) {
+      continue;
+    }
+
+    const listChildren = [...block.children].filter((child) =>
+      child instanceof HTMLElement
+        ? child.tagName === "UL" || child.tagName === "OL"
+        : false,
+    ) as HTMLElement[];
+
+    if (listChildren.length === 0) {
+      continue;
+    }
+
+    const hasOnlyLists = [...block.childNodes].every(
+      (node) =>
+        (node instanceof HTMLElement &&
+          (node.tagName === "UL" || node.tagName === "OL")) ||
+        isIgnorableNode(node),
+    );
+
+    let insertAfter: HTMLElement = block;
+
+    for (const list of listChildren) {
+      insertAfter.after(list);
+      insertAfter = list;
+    }
+
+    if (hasOnlyLists) {
+      block.remove();
+    }
+
+    changed = true;
+  }
+
+  return changed;
+};
+
+const unwrapNestedParagraphs = (editor: HTMLDivElement) => {
+  let changed = false;
+
+  for (const paragraph of [...editor.querySelectorAll("p")]) {
+    if (paragraph.parentElement !== editor) {
+      continue;
+    }
+
+    const nestedParagraphs = [...paragraph.querySelectorAll("p")];
+
+    if (nestedParagraphs.length === 0) {
+      continue;
+    }
+
+    let insertAfter: HTMLElement = paragraph;
+
+    for (const nested of nestedParagraphs) {
+      insertAfter.after(nested);
+      insertAfter = nested;
+    }
+
+    if (
+      [...paragraph.childNodes].every((node) => isIgnorableNode(node)) &&
+      !paragraph.querySelector("img,video,audio,iframe,table")
+    ) {
+      paragraph.remove();
+    }
+
+    changed = true;
+  }
+
+  return changed;
+};
+
 export const normalizeEditorContentStructure = (editor: HTMLDivElement) => {
   let changed = false;
 
@@ -100,6 +206,18 @@ export const normalizeEditorContentStructure = (editor: HTMLDivElement) => {
     if (moveNestedBlocksAfterHeading(heading)) {
       changed = true;
     }
+  }
+
+  if (unwrapBlockElementsFromSpans(editor)) {
+    changed = true;
+  }
+
+  if (unwrapListsFromBlocks(editor)) {
+    changed = true;
+  }
+
+  if (unwrapNestedParagraphs(editor)) {
+    changed = true;
   }
 
   return changed;

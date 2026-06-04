@@ -9,6 +9,7 @@ import {
   getAutoTitleFromContent,
   hasMeaningfulEditorContent,
   INITIAL_DOCUMENT_ID,
+  isDefaultDocumentTitle,
 } from "../editor-document";
 
 const DOCUMENTS_STORAGE_KEY = "calcify_documents_v1";
@@ -45,6 +46,14 @@ const isTitleMode = (value: unknown): value is "auto" | "manual" =>
 
 const toDocument = (storedDocument: StoredDocument): Document => {
   const createdAtDate = new Date(storedDocument.createdAt);
+  const hasMeaningfulContent = hasMeaningfulEditorContent(
+    storedDocument.content,
+  );
+  const titleWasEditedByUser =
+    storedDocument.titleMode === "manual" &&
+    !isDefaultDocumentTitle(storedDocument.title);
+  const contentWasEditedByUser = hasMeaningfulContent;
+  const hasUserEdited = titleWasEditedByUser || contentWasEditedByUser;
 
   return {
     id: storedDocument.id,
@@ -56,6 +65,11 @@ const toDocument = (storedDocument: StoredDocument): Document => {
       : createdAtDate,
     serverUpdatedAt: storedDocument.serverUpdatedAt,
     titleMode: storedDocument.titleMode,
+    isPersisted: Boolean(storedDocument.serverUpdatedAt),
+    isDirty: false,
+    hasUserEdited,
+    titleWasEditedByUser,
+    contentWasEditedByUser,
   };
 };
 
@@ -202,7 +216,7 @@ export const useEditorDocuments = () => {
   }, [activeDocumentId, documents, isStorageHydrated]);
 
   const updateActiveDocumentContent = useCallback(
-    (content: string) => {
+    (content: string, options?: { isUserEdit?: boolean }) => {
       setDocuments((previousDocuments) =>
         previousDocuments.map((documentItem) => {
           if (documentItem.id !== activeDocumentId) {
@@ -210,12 +224,28 @@ export const useEditorDocuments = () => {
           }
 
           if (documentItem.content === content) {
-            return documentItem;
+            if (!options?.isUserEdit) {
+              return documentItem;
+            }
+
+            if (documentItem.hasUserEdited) {
+              return documentItem;
+            }
+
+            return {
+              ...documentItem,
+              hasUserEdited: true,
+              contentWasEditedByUser: true,
+            };
           }
 
           return {
             ...documentItem,
             content,
+            isDirty: true,
+            hasUserEdited: documentItem.hasUserEdited || !!options?.isUserEdit,
+            contentWasEditedByUser:
+              documentItem.contentWasEditedByUser || !!options?.isUserEdit,
             title:
               documentItem.titleMode === "manual"
                 ? documentItem.title
@@ -235,6 +265,10 @@ export const useEditorDocuments = () => {
     (initialTitle: string, initialContent?: string) => {
       const newDocument = createBlankDocument(initialTitle, {
         content: initialContent,
+        titleWasEditedByUser: Boolean(initialTitle.trim()),
+        contentWasEditedByUser: Boolean(
+          initialContent && hasMeaningfulEditorContent(initialContent),
+        ),
       });
 
       setDocuments((previousDocuments) => [...previousDocuments, newDocument]);
@@ -288,13 +322,24 @@ export const useEditorDocuments = () => {
           }
 
           if (documentItem.title === normalizedTitle) {
-            return documentItem;
+            if (documentItem.titleWasEditedByUser) {
+              return documentItem;
+            }
+
+            return {
+              ...documentItem,
+              hasUserEdited: true,
+              titleWasEditedByUser: true,
+            };
           }
 
           return {
             ...documentItem,
             title: normalizedTitle,
             titleMode: "manual",
+            isDirty: true,
+            hasUserEdited: true,
+            titleWasEditedByUser: true,
           };
         }),
       );

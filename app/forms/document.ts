@@ -12,9 +12,5 @@ export const documentTitleFormSchema: Record<
 	keyof DocumentTitleFormValues,
 	RegisterOptions<DocumentTitleFormValues>
 > = {
-	title: {
-		required: "Informe um nome para o documento",
-		validate: (value) =>
-			value.trim().length > 0 || "Informe um nome para o documento",
-	},
+	title: {},
 };

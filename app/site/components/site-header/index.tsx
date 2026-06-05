@@ -69,7 +69,7 @@ export default function SiteHeader() {
 
       <div
         className={`overflow-hidden border-zinc-200/70 border-t bg-white/95 transition-[max-height,opacity] duration-200 md:hidden ${
-          isMenuOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          isMenuOpen ? "max-h-90 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <nav className="mx-auto grid max-w-7xl gap-1 px-4 py-3 sm:px-6">

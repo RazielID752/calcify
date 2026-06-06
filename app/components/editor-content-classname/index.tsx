@@ -1,5 +1,5 @@
 export const EDITOR_CONTENT_CLASSNAME = [
-  "mx-auto min-h-[68vh] w-full max-w-7xl outline-none prose prose-zinc",
+  "mx-auto min-h-[68vh] w-full max-w-7xl cursor-text pb-[32vh] outline-none prose prose-zinc",
   "[&_blockquote]:border-l-4",
   "[&_blockquote]:border-emerald-300",
   "[&_blockquote]:pl-4",
@@ -53,6 +53,8 @@ export const EDITOR_CONTENT_CLASSNAME = [
   "[&_ul]:mb-6",
   "[&_li]:my-1",
   "[&_table]:my-6",
+  "[&_table+p]:min-h-[1.6em]",
+  "[&_table+p]:cursor-text",
   "[&_hr]:my-4",
   "[&_table]:w-full",
   "[&_table]:border-collapse",

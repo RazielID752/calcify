@@ -43,6 +43,8 @@ type LinkOptions = {
   openInNewTab?: boolean;
 };
 
+const CARET_MARKER_ATTRIBUTE = "data-editor-caret-marker";
+
 const escapeHtmlAttribute = (value: string) =>
   value
     .replaceAll("&", "&amp;")
@@ -444,6 +446,31 @@ const moveSelectionToEnd = (element: HTMLElement) => {
   selection.addRange(range);
 };
 
+const moveSelectionToInsertedCaretMarker = (editor: HTMLDivElement) => {
+  const marker = editor.querySelector(`[${CARET_MARKER_ATTRIBUTE}="true"]`);
+
+  if (!(marker instanceof HTMLElement)) {
+    return;
+  }
+
+  const paragraph = marker.closest("p");
+  marker.remove();
+
+  if (!(paragraph instanceof HTMLParagraphElement)) {
+    return;
+  }
+
+  if (
+    (paragraph.textContent ?? "").replaceAll("\u00A0", " ").trim().length ===
+      0 &&
+    !paragraph.querySelector("img,video,audio,iframe,table")
+  ) {
+    paragraph.innerHTML = "<br>";
+  }
+
+  moveSelectionToEnd(paragraph);
+};
+
 const replaceBlockElementTag = (block: HTMLElement, tagName: string) => {
   const nextBlock = document.createElement(tagName);
 
@@ -644,6 +671,14 @@ export const editorCommands = {
   codeBlock(context: EditorContext) {
     runExecCommand(context, "formatBlock", "pre");
   },
+  horizontalRule(context: EditorContext) {
+    runExecCommand(
+      context,
+      "insertHTML",
+      `<hr><p><span ${CARET_MARKER_ATTRIBUTE}="true"></span><br></p>`,
+    );
+    moveSelectionToInsertedCaretMarker(context.editor);
+  },
   bold(context: EditorContext) {
     restoreSelection(context);
 
@@ -835,10 +870,11 @@ export const editorCommands = {
       "<tr><td>Revisão</td><td>Cliente</td><td>Não iniciado</td></tr>",
       "</tbody>",
       "</table>",
-      "<p><br></p>",
+      `<p><span ${CARET_MARKER_ATTRIBUTE}="true"></span><br></p>`,
     ].join("");
 
     runExecCommand(context, "insertHTML", tableHtml);
+    moveSelectionToInsertedCaretMarker(context.editor);
   },
   removeImage(context: EditorContext) {
     restoreSelection(context);

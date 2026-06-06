@@ -6,17 +6,30 @@ import { navItems } from "../site-data";
 
 const productMarks = ["Markdown", "Cálculos", "Conversões", "Biblioteca"];
 
-const footerLinks = [
+const productLinks = navItems.filter((item) =>
+  ["#recursos", "#produto", "#diferencial"].includes(item.href),
+);
+
+const platformLinks = [
   { label: "Editor", href: "/editor" },
-  { label: "Privacidade", href: "/privacidade" },
-  ...navItems,
+  ...navItems.filter((item) =>
+    ["#fluxo", "#plano", "#download"].includes(item.href),
+  ),
+];
+
+const legalLinks = [{ label: "Privacidade", href: "/privacidade" }];
+
+const footerColumns = [
+  { title: "Produto", links: productLinks },
+  { title: "Plataforma", links: platformLinks },
+  { title: "Legal", links: legalLinks },
 ];
 
 export default function SiteFooter() {
   return (
     <footer className="border-zinc-200 border-t bg-zinc-950 text-white">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1.15fr] lg:items-start">
           <div>
             <Link href="/" className="inline-flex items-center">
               <Image
@@ -43,23 +56,27 @@ export default function SiteFooter() {
             </div>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-2">
-            <div>
-              <h2 className="text-sm font-semibold text-white">Produto</h2>
-              <nav className="mt-4 grid gap-3 text-sm text-zinc-400">
-                {footerLinks.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="transition-colors hover:text-white"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {footerColumns.map((column) => (
+              <div key={column.title}>
+                <h2 className="text-sm font-semibold text-white">
+                  {column.title}
+                </h2>
+                <nav className="mt-4 grid gap-3 text-sm text-zinc-400">
+                  {column.links.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="transition-colors hover:text-white"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+            ))}
 
-            <div>
+            <div className="sm:col-span-2 lg:col-span-3 xl:col-span-1">
               <h2 className="text-sm font-semibold text-white">Comece</h2>
               <p className="mt-4 text-sm leading-6 text-zinc-400">
                 Teste uma nota com cálculo, conversão ou markdown e veja o

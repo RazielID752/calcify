@@ -8,6 +8,7 @@ import {
   ImagePlus,
   List,
   ListOrdered,
+  Minus,
   Pilcrow,
   Quote,
   Sigma,
@@ -25,6 +26,7 @@ export type EditorBlockAction =
   | "orderedList"
   | "blockquote"
   | "codeBlock"
+  | "horizontalRule"
   | "table"
   | "image"
   | "calculation";
@@ -81,6 +83,11 @@ const blockActions: Array<{
     id: "codeBlock",
     label: "Código",
     icon: Code,
+  },
+  {
+    id: "horizontalRule",
+    label: "Barra",
+    icon: Minus,
   },
   {
     id: "table",

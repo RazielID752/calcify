@@ -187,6 +187,63 @@ const unwrapNestedParagraphs = (editor: HTMLDivElement) => {
   return changed;
 };
 
+const getLastMeaningfulRootChild = (editor: HTMLDivElement) => {
+  for (const child of [...editor.childNodes].reverse()) {
+    if (isIgnorableNode(child)) {
+      continue;
+    }
+
+    return child;
+  }
+
+  return null;
+};
+
+export const getLastMeaningfulRootElement = (editor: HTMLDivElement) => {
+  const lastChild = getLastMeaningfulRootChild(editor);
+
+  return lastChild instanceof HTMLElement ? lastChild : null;
+};
+
+const isBlankParagraphElement = (
+  element: Element | null,
+): element is HTMLParagraphElement =>
+  element instanceof HTMLParagraphElement &&
+  (element.textContent ?? "").replaceAll("\u00A0", " ").trim().length === 0 &&
+  !element.querySelector("img,video,audio,iframe,table");
+
+export const getEditableParagraphAfterTerminalTable = (
+  editor: HTMLDivElement,
+) => {
+  const lastChild = getLastMeaningfulRootChild(editor);
+
+  if (
+    !(lastChild instanceof HTMLParagraphElement) ||
+    !isBlankParagraphElement(lastChild)
+  ) {
+    return null;
+  }
+
+  const previousElement = lastChild.previousElementSibling;
+
+  return previousElement instanceof HTMLTableElement ? lastChild : null;
+};
+
+export const ensureEditableParagraphAfterTerminalTable = (
+  editor: HTMLDivElement,
+) => {
+  const lastChild = getLastMeaningfulRootChild(editor);
+
+  if (!(lastChild instanceof HTMLTableElement)) {
+    return null;
+  }
+
+  const paragraph = document.createElement("p");
+  paragraph.innerHTML = "<br>";
+  editor.appendChild(paragraph);
+  return paragraph;
+};
+
 export const normalizeEditorContentStructure = (editor: HTMLDivElement) => {
   let changed = false;
 
@@ -217,6 +274,10 @@ export const normalizeEditorContentStructure = (editor: HTMLDivElement) => {
   }
 
   if (unwrapNestedParagraphs(editor)) {
+    changed = true;
+  }
+
+  if (ensureEditableParagraphAfterTerminalTable(editor)) {
     changed = true;
   }
 

@@ -36,6 +36,12 @@ import EditorFormattingToolbar from "../editor-formatting-toolbar";
 import EditorQuickMenu from "../editor-quick-menu";
 import EditorTour from "../editor-tour";
 import EditorWritingSurface from "../editor-writing-surface";
+import {
+  ensureEditableParagraphAfterTerminalTable,
+  getEditableParagraphAfterTerminalTable,
+  getLastMeaningfulRootElement,
+  moveCaretToEnd,
+} from "../hooks/editor-content-utils";
 import { useActiveEditorDocument } from "../hooks/use-active-editor-document";
 import { useAutoTransforms } from "../hooks/use-auto-transforms";
 import {
@@ -722,6 +728,49 @@ export default function Editor() {
     syncToolbarState,
   ]);
 
+  const handleEditorClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      const editor = editorRef.current;
+
+      if (!editor) {
+        return;
+      }
+
+      const target = event.target;
+      const createdParagraph =
+        ensureEditableParagraphAfterTerminalTable(editor);
+      const trailingParagraph =
+        createdParagraph ?? getEditableParagraphAfterTerminalTable(editor);
+
+      const clickedEditor = target === editor;
+      const clickedTrailingParagraph =
+        target instanceof Node && Boolean(trailingParagraph?.contains(target));
+
+      if (!clickedEditor && !clickedTrailingParagraph) {
+        if (createdParagraph) {
+          persistPlaceholderCleanup();
+        }
+
+        return;
+      }
+
+      const targetElement =
+        trailingParagraph ?? getLastMeaningfulRootElement(editor);
+
+      if (!targetElement) {
+        return;
+      }
+
+      moveCaretToEnd(targetElement);
+      updateSavedRange();
+
+      if (createdParagraph) {
+        persistPlaceholderCleanup();
+      }
+    },
+    [editorRef, persistPlaceholderCleanup, updateSavedRange],
+  );
+
   const removeIdleBlockActionPlaceholder = useCallback(
     (target?: EventTarget | null) => {
       const editor = editorRef.current;
@@ -856,6 +905,9 @@ export default function Editor() {
           return;
         case "codeBlock":
           run((context) => editorCommands.codeBlock(context));
+          return;
+        case "horizontalRule":
+          run((context) => editorCommands.horizontalRule(context));
           return;
         case "table":
           run((context) => editorCommands.table(context));
@@ -1072,7 +1124,7 @@ export default function Editor() {
               syncToolbarState();
             }}
             onBeforeInput={handleEditorBeforeInput}
-            onClick={() => undefined}
+            onClick={handleEditorClick}
             onPaste={handlePaste}
             onKeyDown={handleEditorKeyDown}
             onMouseUp={() => {

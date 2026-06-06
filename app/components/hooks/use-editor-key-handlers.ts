@@ -74,7 +74,10 @@ export function useEditorKeyHandlers({
         return leftSibling;
       }
 
-      if (rightSibling instanceof HTMLElement && rightSibling.tagName === "PRE") {
+      if (
+        rightSibling instanceof HTMLElement &&
+        rightSibling.tagName === "PRE"
+      ) {
         return rightSibling;
       }
     }
@@ -104,7 +107,10 @@ export function useEditorKeyHandlers({
       const candidateElement = getElementFromNode(candidateNode);
       const closestImage = candidateElement?.closest("img");
 
-      if (closestImage instanceof HTMLElement && editor.contains(closestImage)) {
+      if (
+        closestImage instanceof HTMLElement &&
+        editor.contains(closestImage)
+      ) {
         const imageBlock = closestImage.closest("p,div,li,blockquote");
 
         if (
@@ -247,6 +253,57 @@ export function useEditorKeyHandlers({
     syncToolbarState();
     updateSavedRange();
 
+    return true;
+  }, [editorRef, persistHtml, syncToolbarState, updateSavedRange]);
+
+  const insertParagraphAfterTerminalTable = useCallback(() => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const range = selection.getRangeAt(0);
+    const cell = getElementFromNode(range.startContainer)?.closest("td,th");
+
+    if (
+      !(cell instanceof HTMLTableCellElement) ||
+      !selection.isCollapsed ||
+      !editor.contains(cell) ||
+      !isCaretAtEndOfBlock(cell)
+    ) {
+      return false;
+    }
+
+    const table = cell.closest("table");
+
+    if (!(table instanceof HTMLTableElement) || !editor.contains(table)) {
+      return false;
+    }
+
+    const cells = [...table.querySelectorAll("th,td")];
+    const isLastCell = cells.at(-1) === cell;
+
+    if (!isLastCell) {
+      return false;
+    }
+
+    const nextElement = table.nextElementSibling;
+    const paragraph =
+      nextElement instanceof HTMLParagraphElement
+        ? nextElement
+        : document.createElement("p");
+
+    if (!paragraph.isConnected) {
+      paragraph.innerHTML = "<br>";
+      table.insertAdjacentElement("afterend", paragraph);
+    }
+
+    moveCaretToEnd(paragraph);
+    persistHtml();
+    syncToolbarState();
+    updateSavedRange();
     return true;
   }, [editorRef, persistHtml, syncToolbarState, updateSavedRange]);
 
@@ -400,6 +457,11 @@ export function useEditorKeyHandlers({
         return;
       }
 
+      if (!event.shiftKey && insertParagraphAfterTerminalTable()) {
+        event.preventDefault();
+        return;
+      }
+
       const codeBlock = findCodeBlockFromSelection();
 
       if (!codeBlock) {
@@ -417,6 +479,7 @@ export function useEditorKeyHandlers({
       insertTabCharacters,
       insertLineBreakInsideCodeBlock,
       insertParagraphAfterCalculatedResult,
+      insertParagraphAfterTerminalTable,
       onRedo,
       onUndo,
       run,

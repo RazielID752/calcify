@@ -584,6 +584,10 @@ const unwrapListFromBlock = (context: EditorContext) => {
     return;
   }
 
+  if (!context.editor.contains(list)) {
+    return;
+  }
+
   const parent = list.parentElement;
 
   if (!parent || !["P", "DIV"].includes(parent.tagName)) {
@@ -595,8 +599,50 @@ const unwrapListFromBlock = (context: EditorContext) => {
   }
 
   parent.replaceWith(list);
-  moveSelectionToEnd(list);
+
+  const listItem = list.querySelector("li");
+
+  if (listItem instanceof HTMLElement) {
+    moveSelectionToEnd(listItem);
+  }
+};
+
+const createEmptyListFromCurrentBlock = (
+  context: EditorContext,
+  type: ListType,
+) => {
   restoreSelection(context);
+
+  const selection = window.getSelection();
+
+  if (!selection || !selection.isCollapsed || selection.rangeCount === 0) {
+    return false;
+  }
+
+  const block = getClosestBlockElement(context);
+
+  if (!(block instanceof HTMLElement) || block.tagName === "LI") {
+    return false;
+  }
+
+  if (block.parentElement !== context.editor) {
+    return false;
+  }
+
+  const hasText = (block.textContent ?? "").replaceAll("\u00A0", " ").trim();
+
+  if (hasText || block.querySelector("img,video,audio,iframe,table")) {
+    return false;
+  }
+
+  const list = document.createElement(type === "bullet" ? "ul" : "ol");
+  const listItem = document.createElement("li");
+
+  listItem.innerHTML = "<br>";
+  list.appendChild(listItem);
+  block.replaceWith(list);
+  moveSelectionToEnd(listItem);
+  return true;
 };
 
 export const editorCommands = {
@@ -643,6 +689,10 @@ export const editorCommands = {
     document.execCommand("justifyLeft", false);
   },
   list(context: EditorContext, type: ListType) {
+    if (createEmptyListFromCurrentBlock(context, type)) {
+      return;
+    }
+
     runExecCommand(
       context,
       type === "bullet" ? "insertUnorderedList" : "insertOrderedList",

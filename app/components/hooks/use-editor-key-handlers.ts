@@ -307,6 +307,76 @@ export function useEditorKeyHandlers({
     return true;
   }, [editorRef, persistHtml, syncToolbarState, updateSavedRange]);
 
+  const removeEmptyListMarker = useCallback(() => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection || !selection.isCollapsed) {
+      return false;
+    }
+
+    const listItem = getSelectionBlockElement(editor);
+
+    if (!(listItem instanceof HTMLLIElement)) {
+      return false;
+    }
+
+    const list = listItem.parentElement;
+
+    if (
+      !(list instanceof HTMLUListElement || list instanceof HTMLOListElement) ||
+      !editor.contains(list)
+    ) {
+      return false;
+    }
+
+    const listItemText = (listItem.textContent ?? "")
+      .replaceAll("\u00A0", " ")
+      .trim();
+
+    if (
+      listItemText ||
+      listItem.querySelector("img,video,audio,iframe,table,ul,ol")
+    ) {
+      return false;
+    }
+
+    const paragraph = document.createElement("p");
+    paragraph.innerHTML = "<br>";
+
+    const nextItems = [...list.children].filter(
+      (item) =>
+        item instanceof HTMLLIElement &&
+        item.compareDocumentPosition(listItem) &
+          Node.DOCUMENT_POSITION_PRECEDING,
+    );
+
+    if (list.children.length === 1) {
+      list.replaceWith(paragraph);
+    } else if (nextItems.length === 0) {
+      listItem.remove();
+      list.insertAdjacentElement("afterend", paragraph);
+    } else {
+      const nextList = document.createElement(list.tagName.toLowerCase()) as
+        | HTMLUListElement
+        | HTMLOListElement;
+
+      for (const item of nextItems) {
+        nextList.appendChild(item);
+      }
+
+      listItem.remove();
+      list.insertAdjacentElement("afterend", paragraph);
+      paragraph.insertAdjacentElement("afterend", nextList);
+    }
+
+    moveCaretToEnd(paragraph);
+    persistHtml();
+    syncToolbarState();
+    updateSavedRange();
+    return true;
+  }, [editorRef, persistHtml, syncToolbarState, updateSavedRange]);
+
   const exitBlockquote = useCallback(() => {
     const editor = editorRef.current;
 
@@ -356,6 +426,14 @@ export function useEditorKeyHandlers({
       }
 
       if (
+        nativeEvent.inputType === "deleteContentBackward" &&
+        removeEmptyListMarker()
+      ) {
+        event.preventDefault();
+        return;
+      }
+
+      if (
         nativeEvent.inputType !== "insertParagraph" &&
         nativeEvent.inputType !== "insertLineBreak"
       ) {
@@ -375,6 +453,7 @@ export function useEditorKeyHandlers({
       continueFromCalculatedResult,
       findCodeBlockFromSelection,
       insertLineBreakInsideCodeBlock,
+      removeEmptyListMarker,
     ],
   );
 
@@ -433,6 +512,11 @@ export function useEditorKeyHandlers({
         }
 
         if (selection.isCollapsed) {
+          if (event.key === "Backspace" && removeEmptyListMarker()) {
+            event.preventDefault();
+            return;
+          }
+
           const deletableNode = findDeletableImageNodeFromSelection();
 
           if (deletableNode) {
@@ -480,6 +564,7 @@ export function useEditorKeyHandlers({
       insertLineBreakInsideCodeBlock,
       insertParagraphAfterCalculatedResult,
       insertParagraphAfterTerminalTable,
+      removeEmptyListMarker,
       onRedo,
       onUndo,
       run,

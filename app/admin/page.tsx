@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import AdminPageClient from "./page-client";
 
 export const metadata: Metadata = {
-  title: "Administração | Calcify",
+  title: "Administração",
 };
 
 export default function AdminPage() {

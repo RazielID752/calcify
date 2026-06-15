@@ -4,7 +4,7 @@ import SiteFooter from "../site/components/site-footer";
 import SiteHeader from "../site/components/site-header";
 
 export const metadata: Metadata = {
-  title: "Política de Privacidade | Calcify",
+  title: "Política de Privacidade",
   description:
     "Entenda como o Calcify trata dados pessoais, cookies, documentos, planos pagos e informações de acesso.",
 };

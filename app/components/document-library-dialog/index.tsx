@@ -495,8 +495,10 @@ export default function DocumentLibraryDialog({
             >
               <div className="shrink-0 border-b border-zinc-200/80 p-3">
                 <div className="relative">
-                  <Search className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-zinc-400" />
+                  <Search className="pointer-events-none -translate-y-1/2 absolute top-1/2 left-3 size-4 text-zinc-400" />
                   <Input
+                    type="search"
+                    enterKeyHint="search"
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
                     placeholder="Buscar documentos"

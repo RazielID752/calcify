@@ -3,7 +3,7 @@ import Editor from "@/app/components/editor";
 import EditorAuthGate from "./editor-auth-gate";
 
 export const metadata: Metadata = {
-  title: "Editor | Calcify",
+  title: "Editor",
 };
 
 export default function EditorPage() {

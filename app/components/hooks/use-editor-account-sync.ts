@@ -126,6 +126,7 @@ export const useEditorAccountSync = ({
   const isAutosaveQueuedRef = useRef(false);
   const documentsRef = useRef(documents);
   const activeDocumentIdRef = useRef(activeDocumentId);
+  const persistCurrentDocumentHtmlRef = useRef(persistCurrentDocumentHtml);
   const authTokenRef = useRef<string | null>(null);
   const authenticatedUserRef = useRef<AuthUser | null>(null);
   const serverUpdatedAtByDocumentIdRef = useRef<Record<string, string>>({});
@@ -156,6 +157,10 @@ export const useEditorAccountSync = ({
   }, [activeDocumentId]);
 
   useEffect(() => {
+    persistCurrentDocumentHtmlRef.current = persistCurrentDocumentHtml;
+  }, [persistCurrentDocumentHtml]);
+
+  useEffect(() => {
     authTokenRef.current = authToken;
   }, [authToken]);
 
@@ -184,13 +189,13 @@ export const useEditorAccountSync = ({
   const handleExpiredSession = useCallback(() => {
     clearAutosaveTimer();
     clearAutosaveRetryTimer();
-    persistCurrentDocumentHtml();
+    persistCurrentDocumentHtmlRef.current();
     clearAuthSession();
     setAuthToken(null);
     setAuthenticatedUser(null);
     toast.error("Sua sessão expirou. Faça login novamente.");
     redirectToLogin();
-  }, [clearAutosaveRetryTimer, clearAutosaveTimer, persistCurrentDocumentHtml]);
+  }, [clearAutosaveRetryTimer, clearAutosaveTimer]);
 
   const detachServerDocumentToLocal = useCallback(
     (documentId: string) => {
@@ -637,6 +642,8 @@ export const useEditorAccountSync = ({
     }
 
     let isCancelled = false;
+    const documentsAtRequestStart = documentsRef.current;
+    const activeDocumentIdAtRequestStart = activeDocumentIdRef.current;
 
     void fetchDocumentsWithApi(authToken, {
       page: 1,
@@ -682,7 +689,12 @@ export const useEditorAccountSync = ({
           latestApiItems.map((item) => [item.id, item.updatedAt]),
         );
 
-        if (!hadStoredDocuments) {
+        // A late account response must not replace tabs opened or edited meanwhile.
+        if (
+          !hadStoredDocuments &&
+          documentsRef.current === documentsAtRequestStart &&
+          activeDocumentIdRef.current === activeDocumentIdAtRequestStart
+        ) {
           setDocuments(apiDocuments);
           setActiveDocumentId(apiDocuments[0].id);
           return;

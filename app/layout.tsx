@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://calcify.app"),
+  metadataBase: new URL("https://www.calcify.com.br"),
   authors: [{ name: "Marcos Nathanael" }],
   creator: "Marcos Nathanael",
   publisher: "Calcify",

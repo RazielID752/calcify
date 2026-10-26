@@ -31,8 +31,8 @@ export default function HeroSection() {
               size="lg"
               className="h-12 gap-2 rounded-md bg-zinc-950 px-5 text-white"
             >
-              <Link href="/editor">
-                Abrir editor
+              <Link href="/cadastro">
+                Experimentar por um mês
                 <ArrowRight className="size-4" />
               </Link>
             </Button>

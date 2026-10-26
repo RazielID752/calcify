@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { billingDestination, stripeRedirectUrl, statusLabel } from '../lib/billing-state.ts';
+test('expired subscription is sent to billing, active stays in editor',()=>{assert.equal(billingDestination({hasPremium:false}),'/assinatura?regularizar=1');assert.equal(billingDestination({hasPremium:true}),null);});
+test('only Stripe HTTPS checkout/portal redirects are accepted',()=>{assert.equal(stripeRedirectUrl('https://checkout.stripe.com/c/pay/test'),'https://checkout.stripe.com/c/pay/test');assert.throws(()=>stripeRedirectUrl('https://checkout.stripe.com.evil.test'));assert.throws(()=>stripeRedirectUrl('javascript:alert(1)'));assert.throws(()=>stripeRedirectUrl('http://billing.stripe.com/test'));});
+test('trial is distinct from payment failure',()=>{assert.equal(statusLabel('trialing'),'Em teste');assert.equal(statusLabel('past_due'),'Pagamento pendente');});
+test('only returning subscribers with verified identity auto-open regularization', async()=>{const { shouldRegularizeAutomatically: check }=await import('../lib/billing-state.ts');const expired={enabled:true,hasPremium:false,emailVerified:true,hasCpf:true,status:'past_due',accessBlocked:false};assert.equal(check(expired),true);assert.equal(check({...expired,status:'none'}),false);assert.equal(check({...expired,hasPremium:true}),false);assert.equal(check({...expired,accessBlocked:true}),false);assert.equal(check({...expired,emailVerified:false}),false);});

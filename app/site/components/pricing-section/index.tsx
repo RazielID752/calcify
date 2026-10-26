@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { pricingPlan, pricingFeatures, whatsappContactUrl } from "../site-data";
+import { pricingPlan, pricingFeatures } from "../site-data";
 
 export default function PricingSection() {
   return (
@@ -70,13 +70,14 @@ export default function PricingSection() {
                   size="lg"
                   className="h-12 w-full gap-2 rounded-md bg-zinc-950 px-5 text-white"
                 >
-                  <a href={whatsappContactUrl} target="_blank" rel="noreferrer">
+                  <a href="/cadastro" target="_blank" rel="noreferrer">
                     {pricingPlan.ctaLabel}
                     <ArrowRight className="size-4" />
                   </a>
                 </Button>
                 <p className="mt-3 text-xs text-zinc-500">
-                  Resposta direta no WhatsApp para ativar o plano.
+                  Um mês de teste com cartão. Depois, R$ 23,99/mês
+                  automaticamente, salvo cancelamento. Um teste por CPF.
                 </p>
               </div>
             </div>

@@ -20,8 +20,7 @@ export type StoredAuthUser = {
 export const isAdminUser = (
   user: Pick<Partial<StoredAuthUser>, "email" | "profile"> | null,
 ) =>
-  user?.profile === "Administrador" ||
-  user?.email?.trim().toLowerCase() === ADMIN_EMAIL;
+  user?.profile === "Administrador";
 
 export const getStoredAuthUser = () => {
   if (typeof window === "undefined") {

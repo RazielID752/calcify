@@ -1,5 +1,6 @@
 "use client";
 
+import SubscriptionsTable from "./components/subscriptions-table";
 import { AccountsTable } from "@/app/admin/components/accounts-table";
 import { AdminPageHeader } from "@/app/admin/components/admin-page/admin-page-header";
 import { AdminSummaryCards } from "@/app/admin/components/admin-page/admin-summary-cards";
@@ -42,6 +43,8 @@ export default function AdminPageClient() {
             void adminPage.handleCopyTemporaryPassword()
           }
         />
+
+        <SubscriptionsTable />
 
         <AccountsTable
           users={adminPage.overview.users}

@@ -17,7 +17,8 @@
     "hooks:install": "node scripts/setup-git-hooks.mjs",
     "release:patch": "node scripts/create-release.mjs patch",
     "release:minor": "node scripts/create-release.mjs minor",
-    "release:major": "node scripts/create-release.mjs major"
+    "release:major": "node scripts/create-release.mjs major",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@cspell/dict-pt-br": "^2.4.2",

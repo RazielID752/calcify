@@ -131,6 +131,8 @@ export default function LoginPageClient() {
               </Button>
             </form>
 
+            <p className="mt-5 text-sm">Ainda não tem conta? <Link href="/cadastro" className="underline">Criar conta e experimentar Premium</Link></p>
+
             <div className="mt-6 flex items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
               <ShieldCheck className="size-4 text-emerald-700" />
               Sessão protegida pelo controle de acesso do Calcify.

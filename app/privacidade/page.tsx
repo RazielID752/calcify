@@ -5,6 +5,7 @@ import SiteHeader from "../site/components/site-header";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
+  alternates: { canonical: "/privacidade" },
   description:
     "Entenda como o Calcify trata dados pessoais, cookies, documentos, planos pagos e informações de acesso.",
 };
@@ -37,8 +38,8 @@ const sections = [
   {
     title: "D) Plano pago, cobrança e controle de acesso",
     content: [
-      "O Calcify pode oferecer plano pago com acesso mediante pagamento direto, sem integração inicial com gateway de pagamento. Nesses casos, o controle de ativação, renovação ou suspensão pode ser feito manualmente pela administração do serviço.",
-      "Para fins de gestão do plano, poderemos tratar dados como nome, e-mail, status da conta, grupo profissional vinculado, data de contratação, situação de pagamento, histórico de suporte e informações necessárias para liberação ou bloqueio de acesso.",
+      "O Calcify oferece assinatura mensal processada pelo Stripe. Clientes elegíveis podem iniciar um mês de teste com cartão, seguido de cobrança mensal automática, salvo cancelamento. A contratação informa o valor e a data da primeira cobrança. Dados de cartão são inseridos no ambiente do Stripe e não são armazenados pelo Calcify.",
+      "Para gerir o plano, tratamos nome, e-mail, status da conta, grupo de acesso, identificadores da assinatura, datas e situação de pagamento. O CPF é usado para gerar um identificador protegido e impedir contas duplicadas e repetição do teste. Esse identificador continua sendo dado pessoal e recebe controles de acesso. A exclusão da conta não concede um novo teste; o tratamento e a retenção do registro mínimo antifraude devem respeitar as finalidades e os direitos descritos nesta política.",
       "Caso o pagamento não seja realizado até a data combinada, a conta individual ou o grupo profissional correspondente poderá ser desativado. A desativação impede o acesso ao sistema enquanto a situação não for regularizada.",
       "Se uma conta estiver vinculada a um grupo profissional, ela poderá seguir as regras de acesso aplicadas ao grupo. Assim, a desativação do grupo pode suspender o acesso de todas as contas associadas.",
     ],

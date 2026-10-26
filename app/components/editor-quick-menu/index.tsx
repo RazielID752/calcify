@@ -137,6 +137,8 @@ export default function EditorQuickMenu({
             </Link>
           </Button>
 
+          {currentUser ? <Button asChild variant="ghost" className="w-full justify-start gap-2"><Link href="/assinatura" onClick={() => setIsOpen(false)}>Minha assinatura</Link></Button> : null}
+
           {isAdmin ? (
             <Button
               asChild

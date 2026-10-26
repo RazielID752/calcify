@@ -95,13 +95,14 @@ export const navItems = [
   { label: "Por que Calcify", href: "#diferencial" },
 ];
 
-export const whatsappContactUrl = "https://wa.me/+5521974131359?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20o%20Calcify!";
+export const whatsappContactUrl =
+  "https://wa.me/+5521974131359?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20o%20Calcify!";
 
 export const pricingPlan = {
   price: "23,99",
   cadence: "mensal",
   tagline: "Um plano unico, sem camadas escondidas.",
-  ctaLabel: "Entre em contato",
+  ctaLabel: "Criar conta e experimentar",
   bullets: [
     "Acesso completo ao editor Calcify",
     "Calculos e conversoes dentro do texto",
